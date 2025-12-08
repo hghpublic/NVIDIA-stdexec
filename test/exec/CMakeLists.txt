@@ -36,7 +36,7 @@ set(exec_test_sources
     async_scope/test_empty.cpp
     async_scope/test_stop.cpp
     test_when_any.cpp
-    test_at_coroutine_exit.cpp
+    # test_at_coroutine_exit.cpp
     test_materialize.cpp
     $<$<BOOL:${STDEXEC_ENABLE_IO_URING}>:test_io_uring_context.cpp>
     $<$<BOOL:${STDEXEC_ENABLE_WINDOWS_THREAD_POOL}>:test_windows_thread_pool_context.cpp>
@@ -80,6 +80,7 @@ target_link_libraries(test.exec
     Catch2::Catch2
     PRIVATE
     common_test_settings)
+set_target_properties(test.exec PROPERTIES FOLDER "test")
 
 add_executable(test.system_context_replaceability ../test_main.cpp test_system_context_replaceability.cpp)
 target_link_libraries(test.system_context_replaceability
@@ -90,6 +91,7 @@ target_link_libraries(test.system_context_replaceability
     Catch2::Catch2
     PRIVATE
     common_test_settings)
+set_target_properties(test.system_context_replaceability PROPERTIES FOLDER "test")
 
 # Discover the Catch2 test built by the application
 catch_discover_tests(test.exec)

@@ -31,6 +31,10 @@ function(def_example example)
     target_link_libraries(${target}
         PRIVATE STDEXEC::stdexec
                 stdexec_executable_flags)
+
+    cmake_path(GET target STEM LAST_ONLY lastStem)
+    string(REPLACE "." "/" folders ${lastStem})
+    set_target_properties(${target} PROPERTIES FOLDER "${folders}")
 endfunction()
 
 set(stdexec_examples
@@ -73,20 +77,25 @@ endif()
 if (STDEXEC_ENABLE_TBB)
  add_executable(example.benchmark.tbb_thread_pool benchmark/tbb_thread_pool.cpp)
  target_link_libraries(example.benchmark.tbb_thread_pool PRIVATE STDEXEC::tbbpool)
+ set_target_properties(example.benchmark.tbb_thread_pool PROPERTIES FOLDER "example/benchmark")
 
  add_executable(example.benchmark.tbb_thread_pool_nested benchmark/tbb_thread_pool_nested.cpp)
  target_link_libraries(example.benchmark.tbb_thread_pool_nested PRIVATE STDEXEC::tbbpool)
+ set_target_properties(example.benchmark.tbb_thread_pool_nested PROPERTIES FOLDER "example/benchmark")
 
  add_executable(example.benchmark.fibonacci benchmark/fibonacci.cpp)
  target_link_libraries(example.benchmark.fibonacci PRIVATE STDEXEC::tbbpool)
+ set_target_properties(example.benchmark.fibonacci PROPERTIES FOLDER "example/benchmark")
 endif()
 
 if(STDEXEC_ENABLE_TASKFLOW)
  add_executable(example.benchmark.taskflow_thread_pool benchmark/taskflow_thread_pool.cpp)
+ set_target_properties(example.benchmark.taskflow_thread_pool PROPERTIES FOLDER "example/benchmark")
  target_link_libraries(example.benchmark.taskflow_thread_pool PRIVATE STDEXEC::taskflow_pool)
 endif()
 
 if(STDEXEC_ENABLE_ASIO)
 add_executable(example.benchmark.asio_thread_pool benchmark/asio_thread_pool.cpp)
+set_target_properties(example.benchmark.asio_thread_pool PROPERTIES FOLDER "example/benchmark")
 target_link_libraries(example.benchmark.asio_thread_pool PRIVATE STDEXEC::asio_pool)
 endif()

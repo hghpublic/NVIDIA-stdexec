@@ -92,6 +92,7 @@ target_link_libraries(test.stdexec
     Catch2::Catch2
     PRIVATE
     common_test_settings)
+set_target_properties(test.stdexec PROPERTIES FOLDER "test")
 
 add_executable(test.scratch test_main.cpp test_scratch.cpp)
 target_link_libraries(test.scratch
@@ -102,6 +103,7 @@ target_link_libraries(test.scratch
     Catch2::Catch2
     PRIVATE
     common_test_settings)
+set_target_properties(test.scratch PROPERTIES FOLDER "test")
 
 # Discover the Catch2 test built by the application
 include(${Catch2_SOURCE_DIR}/contrib/Catch.cmake)
