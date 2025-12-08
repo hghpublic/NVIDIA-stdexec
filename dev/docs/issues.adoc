@@ -1,0 +1,49 @@
+= Issues
+
+. fix tests
+
+
+----
+$5│ Started PID#26608 - '/workspaces/NVIDIA-stdexec/build/test/exec/test.exec'
+$5│ 
+
+
+$5│ [ RUN      ] `CancelInCleanupActionCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:410
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `CancelInCleanupActionCallsTerminate` in 0.000649 second(s)
+$5│ 
+$5│ [ RUN      ] `CancelDuringCancellationUnwindCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:415
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `CancelDuringCancellationUnwindCallsTerminate` in 0.000506 second(s)
+$5│ 
+$5│ [ RUN      ] `ThrowInCleanupActionCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:420
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `ThrowInCleanupActionCallsTerminate` in 0.000642 second(s)
+$5│ 
+$5│ [ RUN      ] `ThrowInCleanupActionDuringExceptionUnwindCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:425
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `ThrowInCleanupActionDuringExceptionUnwindCallsTerminate` in 0.000411 second(s)
+$5│ 
+$5│ [ RUN      ] `CancelInCleanupActionDuringExceptionUnwindCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:432
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `CancelInCleanupActionDuringExceptionUnwindCallsTerminate` in 0.000452 second(s)
+$5│ 
+$5│ [ RUN      ] `ThrowInCleanupActionDuringCancellationUnwindCallsTerminate` @ test/exec/test_at_coroutine_exit.cpp:439
+$5│ │ Expression REQUIRE(...) failed @ test/test_common/require_terminate.hpp:62:
+$5│ │ │ ❕Original:  aborted
+$5│ │ │ ❗️Expanded:  false
+$5│ [  FAILED  ] `ThrowInCleanupActionDuringCancellationUnwindCallsTerminate` in 0.000453 second(s)
+$5│ 
+
+
+----
