@@ -1,0 +1,16 @@
+= git
+
+Keep all current changes (ours)::
++
+----
+git rebase -X ours <branch>
+
+git fetch
+git checkout origin/<branch> -- <path/to/file>
+
+
+git fetch
+git restore -s origin/<branch> -- <path/to/file>
+----
+
+https://git-scm.com/docs/git-restore
