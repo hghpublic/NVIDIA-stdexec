@@ -154,6 +154,7 @@ set(stdexec_export_targets)
 
 # Define the main library
 add_library(stdexec INTERFACE)
+set_target_properties(stdexec PROPERTIES FOLDER "libs")
 
 file(GLOB_RECURSE exec_headers CONFIGURE_DEPENDS include/exec/*.hpp)
 file(GLOB_RECURSE stdexec_headers CONFIGURE_DEPENDS include/stdexec/*.hpp)
@@ -418,6 +419,9 @@ target_compile_options(system_context PUBLIC
     )
 add_library(STDEXEC::system_context ALIAS system_context)
 target_link_libraries(system_context PUBLIC stdexec)
+
+set_target_properties(system_context PROPERTIES FOLDER "libs")
+
 
 
 option(STDEXEC_ENABLE_IO_URING "Enable the use of the io_uring scheduler on Linux" OFF)
