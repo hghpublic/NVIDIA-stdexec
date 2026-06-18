@@ -1750,10 +1750,12 @@ namespace experimental::execution
             return;
           }
 
-          std::size_t nthreads     = this->pool_.available_parallelism();
-          bwos_params params       = this->pool_.params();
-          std::size_t local_size   = params.blockSize * params.numBlocks;
-          std::size_t chunk_size   = __umin({size / nthreads, local_size * nthreads});
+          std::size_t nthreads = this->pool_.available_parallelism();
+          STDEXEC_ASSERT(nthreads > 0);
+          bwos_params params     = this->pool_.params();
+          std::size_t local_size = params.blockSize * params.numBlocks;
+          std::size_t chunk_size = __umax(
+            {std::size_t{1}, __umin({size / nthreads, local_size * nthreads})});
           auto&       remote_queue = *this->pool_.get_remote_queue();
           auto        it           = std::ranges::begin(this->range_);
           std::size_t i0           = 0;
@@ -1782,6 +1784,7 @@ namespace experimental::execution
 
             std::unique_lock lock{this->start_mutex_};
             this->pool_.bulk_enqueue(remote_queue, std::move(this->tasks_), this->tasks_size_);
+            this->tasks_size_ = 0;
             lock.unlock();
             i0 += chunk_size;
           }
