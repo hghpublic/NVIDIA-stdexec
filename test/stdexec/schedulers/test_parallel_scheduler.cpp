@@ -516,8 +516,9 @@ struct destructor_tracked_value
 
 struct tracked_value_sender
 {
-  using sender_concept        = ex::sender_tag;
-  using completion_signatures = ex::completion_signatures<ex::set_value_t(destructor_tracked_value)>;
+  using sender_concept = ex::sender_tag;
+  using completion_signatures =
+    ex::completion_signatures<ex::set_value_t(destructor_tracked_value)>;
 
   struct env
   {
@@ -620,7 +621,7 @@ TEST_CASE("bulk on parallel_scheduler destroys stored predecessor values",
 
   {
     STDEXEC::parallel_scheduler sched = STDEXEC::get_parallel_scheduler();
-    auto snd = tracked_value_sender{sched, live}
+    auto                        snd   = tracked_value_sender{sched, live}
              | ex::bulk(ex::par, 16, [](std::size_t, destructor_tracked_value&) noexcept {});
 
     auto result = ex::sync_wait(std::move(snd));
@@ -638,7 +639,7 @@ TEST_CASE("bulk on parallel_scheduler destroys stored predecessor values after e
 
   {
     STDEXEC::parallel_scheduler sched = STDEXEC::get_parallel_scheduler();
-    auto snd = tracked_value_sender{sched, live}
+    auto                        snd   = tracked_value_sender{sched, live}
              | ex::bulk(ex::par, 16, [](std::size_t, destructor_tracked_value&) noexcept {});
 
     CHECK_THROWS_AS(ex::sync_wait(std::move(snd)), std::runtime_error);
@@ -655,7 +656,7 @@ TEST_CASE("bulk on parallel_scheduler destroys stored predecessor values after s
 
   {
     STDEXEC::parallel_scheduler sched = STDEXEC::get_parallel_scheduler();
-    auto snd = tracked_value_sender{sched, live}
+    auto                        snd   = tracked_value_sender{sched, live}
              | ex::bulk(ex::par, 16, [](std::size_t, destructor_tracked_value&) noexcept {});
 
     auto result = ex::sync_wait(std::move(snd));

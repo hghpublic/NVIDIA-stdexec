@@ -364,12 +364,9 @@ namespace STDEXEC
         auto __args  = std::move(__base_t::__arguments_.__get());
         __base_t::__arguments_.__destroy();
         std::destroy_at(this);
-        std::apply(
-          [&](auto&&... __args)
-          {
-            STDEXEC::set_value(std::move(__state->__rcvr_), std::move(__args)...);
-          },
-          std::move(__args));
+        std::apply([&](auto&&... __args)
+                   { STDEXEC::set_value(std::move(__state->__rcvr_), std::move(__args)...); },
+                   std::move(__args));
       }
 
       /// Calls `set_error()` on the final receiver of the bulk operation, passing `__ex`.
