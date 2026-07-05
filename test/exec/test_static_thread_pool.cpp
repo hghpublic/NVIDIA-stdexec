@@ -13,6 +13,7 @@ namespace ex = STDEXEC;
 
 namespace
 {
+#if !STDEXEC_NO_STDCPP_EXCEPTIONS()
   struct throwing_set_next_receiver
   {
     using receiver_concept = ex::receiver_tag;
@@ -47,6 +48,7 @@ namespace
       return {};
     }
   };
+#endif
 }  // namespace
 
 TEST_CASE("static_thread_pool::get_scheduler_on_thread Test start on a specific thread",
@@ -89,13 +91,14 @@ TEST_CASE("bulk on static_thread_pool executes on multiple threads", "[types][st
 
 TEST_CASE("schedule_all on static_thread_pool handles empty ranges", "[types][static_thread_pool]")
 {
-  exec::static_thread_pool pool{2};
-  auto                     sender = exec::schedule_all(pool, std::views::iota(size_t{0}, size_t{0}))
+  auto pool   = exec::static_thread_pool{2};
+  auto sender = exec::schedule_all(pool, std::views::iota(size_t{0}, size_t{0}))
               | exec::ignore_all_values();
 
   CHECK(ex::sync_wait(std::move(sender)));
 }
 
+#if !STDEXEC_NO_STDCPP_EXCEPTIONS()
 TEST_CASE("schedule_all on static_thread_pool sends errors from set_next",
           "[types][static_thread_pool]")
 {
@@ -115,6 +118,7 @@ TEST_CASE("schedule_all on static_thread_pool sends errors from set_next",
   REQUIRE(error);
   CHECK_THROWS_AS(std::rethrow_exception(error), std::runtime_error);
 }
+#endif
 
 TEST_CASE("bulk on static_thread_pool executes on multiple threads, take 2",
           "[types][static_thread_pool]")
