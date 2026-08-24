@@ -51,6 +51,11 @@ function(def_example example)
     ${target}
     PRIVATE STDEXEC::stdexec stdexec_executable_flags stdexec_example_settings
             $<TARGET_NAME_IF_EXISTS:TBB::tbb>)
+
+  cmake_path(GET target STEM LAST_ONLY lastStem)
+  string(REPLACE "." "/" folders ${lastStem})
+  set_target_properties(${target} PROPERTIES FOLDER "${folders}")
+
 endfunction()
 
 set(stdexec_examples
@@ -129,4 +134,21 @@ if(STDEXEC_ENABLE_ASIO)
     example.benchmark.asio_thread_pool
     PRIVATE stdexec_example_settings STDEXEC::asioexec
             $<TARGET_NAME_IF_EXISTS:TBB::tbb>)
+endif()
+
+
+# set target property FOLDER for examples
+
+if (STDEXEC_ENABLE_TBB)
+set_target_properties(example.benchmark.tbb_thread_pool PROPERTIES FOLDER "example/benchmark")
+set_target_properties(example.benchmark.tbb_thread_pool_nested PROPERTIES FOLDER "example/benchmark")
+set_target_properties(example.benchmark.fibonacci PROPERTIES FOLDER "example/benchmark")
+endif()
+
+if(STDEXEC_ENABLE_TASKFLOW)
+set_target_properties(example.benchmark.taskflow_thread_pool PROPERTIES FOLDER "example/benchmark")
+endif()
+
+if(STDEXEC_ENABLE_ASIO)
+set_target_properties(example.benchmark.asio_thread_pool PROPERTIES FOLDER "example/benchmark")
 endif()

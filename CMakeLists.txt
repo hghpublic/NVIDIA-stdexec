@@ -663,3 +663,9 @@ if(STDEXEC_INSTALL)
     FINAL_CODE_BLOCK
     code_string)
 endif()
+
+
+# set target property FOLDER for library targets
+
+set_target_properties(stdexec PROPERTIES FOLDER "libs")
+set_target_properties(system_context PROPERTIES FOLDER "libs")

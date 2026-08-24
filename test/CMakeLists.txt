@@ -228,3 +228,9 @@ endif()
 # # Adding multiple tests with a glob icm_glob_build_failure_tests( PATTERN
 # *_fail*.cpp LIBRARIES stdexec PREFIX stdexec FOLDER
 # test/stdexec/algos/adaptors )
+
+
+# set target property FOLDER for tests
+
+set_target_properties(test.stdexec PROPERTIES FOLDER "test")
+set_target_properties(test.scratch PROPERTIES FOLDER "test")
