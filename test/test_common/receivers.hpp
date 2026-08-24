@@ -17,14 +17,23 @@
 #pragma once
 
 #include <catch2/catch_all.hpp>
-#include <stdexec/execution.hpp>
+
+#include <stdexec/__detail/__config.hpp>
+
 #include <test_common/tuple.hpp>
 #include <test_common/type_helpers.hpp>
 
-#include <atomic>
-#include <exception>
-#include <tuple>
-#include <typeinfo>
+#if STDEXEC_USE_MODULES()
+import std;
+import stdexec;
+#else
+#  include <stdexec/execution.hpp>
+
+#  include <atomic>
+#  include <exception>
+#  include <tuple>
+#  include <typeinfo>
+#endif
 
 namespace ex = STDEXEC;
 
@@ -35,7 +44,7 @@ namespace
   {
     struct recv0
     {
-      using receiver_concept = STDEXEC::receiver_tag;
+      using receiver_concept = ex::receiver_tag;
 
       void set_value() noexcept {}
 
@@ -46,7 +55,7 @@ namespace
 
     struct recv_int
     {
-      using receiver_concept = STDEXEC::receiver_tag;
+      using receiver_concept = ex::receiver_tag;
 
       void set_value(int) noexcept {}
 
@@ -57,7 +66,7 @@ namespace
 
     struct recv0_ec
     {
-      using receiver_concept = STDEXEC::receiver_tag;
+      using receiver_concept = ex::receiver_tag;
 
       void set_value() noexcept {}
 
@@ -70,7 +79,7 @@ namespace
 
     struct recv_int_ec
     {
-      using receiver_concept = STDEXEC::receiver_tag;
+      using receiver_concept = ex::receiver_tag;
 
       void set_value(int) noexcept {}
 
@@ -90,7 +99,7 @@ namespace
     _Env              env_{};
 
    public:
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
     base_expect_receiver() = default;
 
     ~base_expect_receiver()
@@ -153,7 +162,7 @@ namespace
 
   struct expect_void_receiver_ex
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
 
     expect_void_receiver_ex(bool& executed)
       : executed_(&executed)
@@ -228,7 +237,7 @@ namespace
     Env env_{};
 
    public:
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
 
     explicit expect_value_receiver_ex(T& dest)
       : dest_(&dest)
@@ -295,7 +304,7 @@ namespace
   template <class Env = ex::env<>>
   struct expect_stopped_receiver_ex
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
 
     explicit expect_stopped_receiver_ex(bool& executed)
       : executed_(&executed)
@@ -415,7 +424,7 @@ namespace
   template <class T, class Env = ex::env<>>
   struct expect_error_receiver_ex
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
 
     explicit expect_error_receiver_ex(T& value)
       : value_(&value)
@@ -460,7 +469,7 @@ namespace
 
   struct logging_receiver
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
 
     logging_receiver(int& state)
       : state_(&state)
@@ -499,7 +508,7 @@ namespace
   template <class T>
   struct typecat_receiver
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
     T*       value_;
     typecat* cat_;
 
@@ -539,7 +548,7 @@ namespace
   template <class F>
   struct fun_receiver
   {
-    using receiver_concept = STDEXEC::receiver_tag;
+    using receiver_concept = ex::receiver_tag;
     F f_;
 
     template <class... Ts>
@@ -590,10 +599,10 @@ namespace
   {
     // Ensure that the given sender type has only one variant for set_value calls
     // If not, sync_wait will not work
-    static_assert(STDEXEC::__single_value_variant_sender<S, ex::__sync_wait::__env>,
+    static_assert(ex::__count_of<ex::set_value_t, S, ex::__sync_wait::__env>::value == 1,
                   "Sender passed to sync_wait needs to have one variant for sending set_value");
 
-    std::optional<std::tuple<Ts...>> res = STDEXEC::sync_wait(static_cast<S&&>(snd));
+    std::optional<std::tuple<Ts...>> res = ex::sync_wait(static_cast<S&&>(snd));
     CHECK(res.has_value());
     std::tuple<Ts...> expected(static_cast<Ts&&>(val)...);
     if constexpr (std::tuple_size_v<std::tuple<Ts...>> == 1)

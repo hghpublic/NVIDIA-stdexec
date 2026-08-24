@@ -15,24 +15,35 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__completion_signatures_of.hpp"
-#include "__concepts.hpp"
-#include "__connect.hpp"
-#include "__diagnostics.hpp"
-#include "__env.hpp"
-#include "__memory.hpp"
-#include "__meta.hpp"
-#include "__operation_states.hpp"
-#include "__receivers.hpp"
-#include "__sender_introspection.hpp"
-#include "__tuple.hpp"
-#include "__type_traits.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include <cstddef>
+import stdexec;
 
-#include "__prologue.hpp"
+#else
+
+#  include "__execution_fwd.hpp"
+
+#  include "__basic_sender_macros.hpp"
+#  include "__completion_signatures_of.hpp"
+#  include "__concepts.hpp"
+#  include "__connect.hpp"
+#  include "__diagnostics.hpp"
+#  include "__env.hpp"
+#  include "__memory.hpp"
+#  include "__meta.hpp"
+#  include "__operation_states.hpp"
+#  include "__receivers.hpp"
+#  include "__sender_introspection.hpp"
+#  include "__tuple.hpp"
+#  include "__type_traits.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cstddef>
+#  endif
+
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_GNU("-Wmissing-braces")
 
@@ -41,24 +52,15 @@ namespace STDEXEC
   /////////////////////////////////////////////////////////////////////////////
   // Generic __sender type
 
-#if STDEXEC_EDG()
-#  define STDEXEC_SEXPR_DESCRIPTOR_FN(_Descriptor)                                                 \
-    ([]<class _Desc = _Descriptor>(_Desc __desc = {}) { return __desc; })
-#  define STDEXEC_SEXPR_DESCRIPTOR(_Tag, _Data, _Child)                                            \
-    STDEXEC::__descriptor_fn<_Tag, _Data, _Child>()
-#else  // ^^^ EDG ^^^ / vvv !EDG vvv
-#  define STDEXEC_SEXPR_DESCRIPTOR_FN(_Descriptor) ([] { return _Descriptor(); })
-#  define STDEXEC_SEXPR_DESCRIPTOR(_Tag, _Data, _Child)                                            \
-    STDEXEC::__descriptor_fn_v<STDEXEC::__desc<_Tag, _Data, _Child>>
-#endif
-
-#if defined(STDEXEC_DEMANGLE_SENDER_NAMES)
+#  if defined(STDEXEC_DEMANGLE_SENDER_NAMES)
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Descriptor>
   inline constexpr auto __descriptor_fn_v = _Descriptor{};
-#else
+#  else
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Descriptor, auto _DescriptorFn = STDEXEC_SEXPR_DESCRIPTOR_FN(_Descriptor)>
   inline constexpr auto __descriptor_fn_v = _DescriptorFn;
-#endif
+#  endif
 
   template <class _Tag, class _Data, class... _Child>
   consteval auto __descriptor_fn() noexcept
@@ -66,6 +68,7 @@ namespace STDEXEC
     return __descriptor_fn_v<__desc<_Tag, _Data, _Child...>>;
   }
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag>
   struct __sexpr_impl;
 
@@ -147,6 +150,7 @@ namespace STDEXEC
     concept __connectable_to =
       __applicable<__connect_t<_Sexpr>, _Sexpr, __state_type_t<_Sexpr, _Receiver>&>;
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     struct __defaults
     {
       static constexpr auto __get_attrs =  //
@@ -228,6 +232,7 @@ namespace STDEXEC
     };
   }  // namespace __detail
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __sexpr_defaults = __detail::__defaults;
 
   template <class _Tag, class _State, std::size_t _Idx>
@@ -236,7 +241,7 @@ namespace STDEXEC
     using receiver_concept = receiver_tag;
     using __index_t        = __msize_t<_Idx>;
 
-#if STDEXEC_APPLE_CLANG()
+#  if STDEXEC_APPLE_CLANG()
     // These constructors are a work-around for bad codegen with apple-clang
     STDEXEC_ATTRIBUTE(always_inline)
     constexpr explicit __rcvr(_State& __state) noexcept
@@ -247,7 +252,7 @@ namespace STDEXEC
     constexpr __rcvr(__rcvr const & __other) noexcept
       : __state_(__other.__state_)
     {}
-#endif  // STDEXEC_APPLE_CLANG()
+#  endif  // STDEXEC_APPLE_CLANG()
 
     template <class... _Args>
     STDEXEC_ATTRIBUTE(always_inline)
@@ -332,6 +337,7 @@ namespace STDEXEC
 
   //! A dummy type used only for diagnostic purposes.
   //! See `__sexpr` for the implementation of P2300's _`basic-sender`_.
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag, class _Data, class... _Child>
   struct __basic_sender
   {
@@ -341,8 +347,10 @@ namespace STDEXEC
     };
   };
 
+#  if !STDEXEC_USE_MODULES()
   namespace
   {
+#  endif
     //! A struct template to aid in creating senders. This struct resembles P2300's
     //! [_`basic-sender`_](https://eel.is/c++draft/exec#snd.expos-24), but is not an exact
     //! implementation. Note: The struct named `__basic_sender` is just a dummy type and
@@ -438,7 +446,9 @@ namespace STDEXEC
     template <class _Tag, class _Data, class... _Child>
     STDEXEC_HOST_DEVICE_DEDUCTION_GUIDE
     __sexpr(_Tag, _Data, _Child...) -> __sexpr<STDEXEC_SEXPR_DESCRIPTOR(_Tag, _Data, _Child...)>;
+#  if !STDEXEC_USE_MODULES()
   }  // anonymous namespace
+#  endif
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // __make_sexpr
@@ -460,6 +470,7 @@ namespace STDEXEC
     };
   }  // namespace __detail
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag>
   inline constexpr __detail::__make_sexpr_t<_Tag> __make_sexpr{};
 
@@ -476,4 +487,5 @@ namespace STDEXEC
   }  // namespace __detail
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

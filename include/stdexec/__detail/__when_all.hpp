@@ -15,32 +15,43 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__basic_sender.hpp"
-#include "__concepts.hpp"
-#include "__continues_on.hpp"
-#include "__diagnostics.hpp"
-#include "__domain.hpp"
-#include "__env.hpp"
-#include "__into_variant.hpp"
-#include "__meta.hpp"
-#include "__optional.hpp"
-#include "__schedulers.hpp"
-#include "__senders.hpp"
-#include "__transform_completion_signatures.hpp"
-#include "__tuple.hpp"
-#include "__type_traits.hpp"
-#include "__utility.hpp"
-#include "__variant.hpp"
+#  include "__basic_sender.hpp"
+#  include "__concepts.hpp"
+#  include "__continues_on.hpp"
+#  include "__diagnostics.hpp"
+#  include "__domain.hpp"
+#  include "__env.hpp"
+#  include "__into_variant.hpp"
+#  include "__just.hpp"
+#  include "__meta.hpp"
+#  include "__optional.hpp"
+#  include "__schedulers.hpp"
+#  include "__senders.hpp"
+#  include "__transform_completion_signatures.hpp"
+#  include "__tuple.hpp"
+#  include "__type_traits.hpp"
+#  include "__utility.hpp"
+#  include "__variant.hpp"
 
-#include "../stop_token.hpp"
+#  include "../stop_token.hpp"
 
-#include "__atomic.hpp"
-#include <exception>
+#  include "__atomic.hpp"
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -279,6 +290,7 @@ namespace STDEXEC
   //!
   //! @see stdexec::when_all      — without the scheduler transfer
   //! @see stdexec::continues_on  — the underlying transfer primitive
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct transfer_when_all_t
   {
     //! @brief Compose @c __sndrs... and deliver the combined completion on
@@ -325,6 +337,7 @@ namespace STDEXEC
   //!
   //! @see stdexec::when_all_with_variant
   //! @see stdexec::transfer_when_all
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct transfer_when_all_with_variant_t
   {
     //! @brief Compose @c __sndrs... (each wrapped in @c into_variant) and
@@ -378,6 +391,7 @@ namespace STDEXEC
   //!             <tt>when_all(...) | continues_on(sch)</tt> instead.
   //!
   //! @hideinitializer
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr transfer_when_all_t transfer_when_all{};
 
   //! @brief The customization point object for the
@@ -387,6 +401,7 @@ namespace STDEXEC
   //!             <tt>when_all_with_variant(...) | continues_on(sch)</tt> instead.
   //!
   //! @hideinitializer
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr transfer_when_all_with_variant_t transfer_when_all_with_variant{};
 
   namespace __when_all
@@ -693,7 +708,10 @@ namespace STDEXEC
     };
 
     template <class _Receiver>
-    static constexpr auto __mk_state_fn(_Receiver&& __rcvr) noexcept
+#  if !STDEXEC_USE_MODULES()
+    static
+#  endif
+      constexpr auto __mk_state_fn(_Receiver&& __rcvr) noexcept
     {
       return [&]<class... _Child>(__ignore, __ignore, _Child&&...) noexcept
         requires(__max1_sender<_Child, __env_t<env_of_t<_Receiver>, _Child...>> && ...)
@@ -945,4 +963,5 @@ namespace STDEXEC
   {};
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

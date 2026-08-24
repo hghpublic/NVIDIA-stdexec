@@ -15,23 +15,33 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__config.hpp"
-#include "__query.hpp"
-#include "__utility.hpp"
+#  include "__concepts.hpp"
+#  include "__query.hpp"
+#  include "__utility.hpp"
 
-#include <cstdint>
-#include <type_traits>
+#  if !STDEXEC_USE_MODULES()
+#    include <cstdint>
+#    include <type_traits>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
   //////////////////////////////////////////////////////////////////////////////////////////
   // __get_completion_behavior
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __completion_behavior
   {
     //private:
@@ -195,10 +205,12 @@ namespace STDEXEC
     }
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag, class _Attrs, class... _Env>
   inline constexpr auto __completion_behavior_of_v =
     __call_result_t<__get_completion_behavior_t<_Tag>, _Attrs const &, _Env const &...>{};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag, class _Attrs, class... _Env>
   concept __completes_inline = (__completion_behavior_of_v<_Tag, _Attrs, _Env...>.value
                                 == __completion_behavior::__inline_completion);
@@ -214,7 +226,7 @@ namespace STDEXEC
     return __completion_behavior_of_v<_Tag, env_of_t<_Sndr>, _Env...>;
   }
 
-#if !defined(STDEXEC_DOXYGEN_INVOKED)
+#  if !defined(STDEXEC_DOXYGEN_INVOKED)
 
   struct [[deprecated("Use exec::completion_behavior from "
                       "<exec/completion_behavior.hpp> instead")]] completion_behavior
@@ -246,8 +258,9 @@ namespace STDEXEC
   }
   // clang-format on
 
-#endif  // !defined(STDEXEC_DOXYGEN_INVOKED)
+#  endif  // !defined(STDEXEC_DOXYGEN_INVOKED)
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

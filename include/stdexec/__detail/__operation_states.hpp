@@ -15,15 +15,25 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__tag_invoke.hpp"
+#  include "__concepts.hpp"
+#  include "__tag_invoke.hpp"
 
-#include <type_traits>
+#  if !STDEXEC_USE_MODULES()
+#    include <type_traits>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -199,9 +209,10 @@ namespace STDEXEC
   //! @see stdexec::connect              — the customization point that produces operation states
   //! @see stdexec::start                — the customization point this concept depends on
   //! @see stdexec::operation_state_tag  — the tag type that opts a class into this concept
-  template <class _Op>
+  STDEXEC_MODULE_EXPORT template <class _Op>
   concept operation_state = __std::destructible<_Op> && std::is_object_v<_Op>
                          && requires(_Op &__op) { STDEXEC::start(__op); };
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

@@ -18,12 +18,20 @@
 
 #include "__config.hpp"
 
-#include <compare>
-#include <source_location>
-#include <string_view>
-#include <typeinfo>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  if !STDEXEC_USE_MODULES()
+#    include <compare>
+#    include <source_location>
+#    include <string_view>
+#    include <typeinfo>
+#  endif
+
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_GNU("-Wunused-private-field")
 
@@ -32,6 +40,7 @@ STDEXEC_PRAGMA_IGNORE_GNU("-Wunused-private-field")
 
 namespace STDEXEC
 {
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty>
   struct __mtype
   {
@@ -40,11 +49,13 @@ namespace STDEXEC
 
   namespace __detail
   {
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Ty>
     extern __mtype<_Ty> __demangle_v;
   }  // namespace __detail
 
   // A utility for pretty-printing type names in diagnostics
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty>
   using __demangle_t = decltype(__detail::__demangle_v<_Ty>)::__t;
 
@@ -90,11 +101,11 @@ namespace STDEXEC
     [[nodiscard]]
     consteval std::string_view __get_pretty_name_helper() noexcept
     {
-#if STDEXEC_EDG()
+#  if STDEXEC_EDG()
       return __detail::__find_pretty_name(std::string_view{STDEXEC_PRETTY_FUNCTION()});
-#else
+#  else
       return __detail::__find_pretty_name(std::source_location::current().function_name());
-#endif
+#  endif
     }
 
     template <class _Ty>
@@ -142,7 +153,7 @@ namespace STDEXEC
       return __name_ <=> __other.__name_;
     }
 
-#if !STDEXEC_NO_STDCPP_TYPEID()
+#  if !STDEXEC_NO_STDCPP_TYPEID()
     [[nodiscard]]
     constexpr auto type() const noexcept -> std::type_info const &
     {
@@ -154,7 +165,7 @@ namespace STDEXEC
     {
       return *__type_;
     }
-#endif
+#  endif
 
    private:
     std::string_view const      __name_;
@@ -176,6 +187,7 @@ namespace STDEXEC
 
   //////////////////////////////////////////////////////////////////////////////////////////
   // __type_index
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __type_index
   {
     __type_index() = default;
@@ -202,7 +214,7 @@ namespace STDEXEC
       return *__info_ <=> *__other.__info_;
     }
 
-#if !STDEXEC_NO_STDCPP_TYPEID()
+#  if !STDEXEC_NO_STDCPP_TYPEID()
     [[nodiscard]]
     constexpr auto type() const noexcept -> std::type_info const &
     {
@@ -214,7 +226,7 @@ namespace STDEXEC
     {
       return (*__info_).type();
     }
-#endif
+#  endif
 
     __type_info const *__info_ = &__detail::__mtypeid_v<void>;
   };
@@ -247,33 +259,35 @@ namespace STDEXEC
 
     STDEXEC_PRAGMA_POP()
 
-#if STDEXEC_MSVC()
+#  if STDEXEC_MSVC()
     template <auto _Id>
     struct __msplice_helper : decltype(__typeid_lookup(__mtypeid_key<_Id>())){};
-#else
+#  else
     // Cache the result of the lookup:
     template <auto _Id>
     extern decltype(__typeid_lookup(__mtypeid_key<_Id>())) __msplice_v;
-#endif
+#  endif
   }  // namespace __detail
 
   // For a given type, return a __type_index object
+  STDEXEC_MODULE_EXPORT_META
   template <class _Ty>
   inline constexpr __type_index __mtypeid = __detail::__mtypeid_value<_Ty>::__id;
 
-#if STDEXEC_MSVC()
+#  if STDEXEC_MSVC()
   template <__type_index _Id>
   using __msplice = __detail::__msplice_helper<_Id>::__t;
-#elif STDEXEC_GCC() && STDEXEC_GCC_VERSION < 1300
+#  elif STDEXEC_GCC() && STDEXEC_GCC_VERSION < 1300
   template <auto _Id>
   using __msplice = decltype(__detail::__msplice_v<_Id>)::__t;
-#else
+#  else
   template <__type_index _Id>
   using __msplice = decltype(__detail::__msplice_v<_Id>)::__t;
-#endif
+#  endif
 
   // Sanity check:
   static_assert(STDEXEC_IS_SAME(void, __msplice<__mtypeid<void>>));
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

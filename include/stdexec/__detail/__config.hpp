@@ -29,6 +29,13 @@
 #  error This library requires the use of the new conforming preprocessor enabled by /Zc:preprocessor.
 #endif
 
+#if defined(STDEXEC_BUILD_MODULES)
+#  define STDEXEC_USE_MODULES() 1
+#  undef STDEXEC_BUILD_MODULES
+#else
+#  define STDEXEC_USE_MODULES() 0
+#endif
+
 #include "__preprocessor.hpp"
 
 #if __has_include(<version>)
@@ -37,10 +44,14 @@
 #  include <ciso646>  // For stdlib feature-test macros when <version> is not available
 #endif
 
-#include <cassert>
-#include <cstdlib>
-#include <type_traits>  // IWYU pragma: keep
-#include <utility>      // IWYU pragma: keep for std::unreachable
+#if STDEXEC_USE_MODULES()
+import std;
+#else
+#  include <cassert>
+#  include <cstdlib>
+#  include <type_traits>  // IWYU pragma: keep
+#  include <utility>      // IWYU pragma: keep for std::unreachable
+#endif
 
 // When used with no arguments, these macros expand to 1 if the current
 // compiler corresponds to the macro name; 0, otherwise. When used with arguments,
@@ -205,6 +216,8 @@ STDEXEC_NAMESPACE_STD_END
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #if !defined(STDEXEC_NAMESPACE)
 #  define STDEXEC stdexec
+#elif STDEXEC_USE_MODULES()
+#  define STDEXEC stdexec
 #else
 #  define STDEXEC STDEXEC_NAMESPACE
 #endif
@@ -239,8 +252,17 @@ STDEXEC_NAMESPACE_STD_END
 // clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+#if defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 202606L
+#  define STDEXEC_NO_STDCPP_COROUTINE_RETURN_VOID_AND_VALUE() 0
+#else
+#  define STDEXEC_NO_STDCPP_COROUTINE_RETURN_VOID_AND_VALUE() 1
+#endif
+
 #if __cpp_impl_coroutine >= 201902L && __cpp_lib_coroutine >= 201902L
-#  include <coroutine>  // IWYU pragma: keep
+#  if !STDEXEC_USE_MODULES()
+// we've already imported std above
+#    include <coroutine>  // IWYU pragma: keep
+#  endif
 #  define STDEXEC_NO_STDCPP_COROUTINES() 0
 namespace STDEXEC::__std
 {
@@ -313,7 +335,11 @@ namespace STDEXEC::__std
 #elif STDEXEC_GCC()
 #  define STDEXEC_ATTRIBUTE_CASE_ALWAYS_INLINE           __attribute__((__always_inline__, __artificial__)) inline
 #else
-#  define STDEXEC_ATTRIBUTE_CASE_ALWAYS_INLINE
+// No always-inline attribute is known for this compiler, but ALWAYS_INLINE
+// must still guarantee inline linkage: header-defined functions marked with
+// it rely on the macro (not an explicit 'inline' at the use site, which
+// would be a duplicate on GCC/Clang) for ODR safety.
+#  define STDEXEC_ATTRIBUTE_CASE_ALWAYS_INLINE           inline
 #endif
 
 // __attribute__((__weak__))
@@ -568,6 +594,8 @@ namespace STDEXEC
 #endif
 
 #if STDEXEC_NVHPC()
+// TODO: this is probably wrong in modules builds, but I don't know if there's an
+//       nv-prefixed build that can enable modules
 #  include <nv/target>
 #  define STDEXEC_TERMINATE() NV_IF_TARGET(NV_IS_HOST, (std::terminate();), (__trap();)) void()
 #elif STDEXEC_CLANG() && defined(__CUDA__) && defined(__CUDA_ARCH__)
@@ -579,8 +607,11 @@ namespace STDEXEC
 // Some compilers turn on pack indexing in pre-C++26 code. We want to use it if it is
 // available. Pack indexing is disabled for clang < 20 because of:
 // https://github.com/llvm/llvm-project/issues/116105
+// Pack indexing is disabled for clang < 24 when modules are enabled because of:
+// https://github.com/llvm/llvm-project/issues/214780
 #if defined(__cpp_pack_indexing) && !STDEXEC_NVCC()                                                \
-  && !(STDEXEC_CLANG() && STDEXEC_CLANG_VERSION < 2000)
+  && !(STDEXEC_CLANG() && STDEXEC_CLANG_VERSION < 2000)                                            \
+  && !(STDEXEC_CLANG() && STDEXEC_CLANG_VERSION < 2400 && STDEXEC_USE_MODULES())
 #  define STDEXEC_NO_STDCPP_PACK_INDEXING() 0
 #else  // ^^^ has pack indexing ^^^ / vvv no pack indexing vvv
 #  define STDEXEC_NO_STDCPP_PACK_INDEXING() 1
@@ -708,6 +739,7 @@ namespace STDEXEC
 
 // clang-format off
 #if STDEXEC_HAS_CTK() && __has_include(<nv/target>)
+// TODO: probably wrong with modules, but do nv-prefixed builds care?
 #  include <nv/target>
 #  define STDEXEC_IF_HOST(...)     NV_IF_TARGET(NV_IS_HOST, (__VA_ARGS__;))
 #  define STDEXEC_IF_DEVICE(...)   NV_IF_TARGET(NV_IS_DEVICE, (__VA_ARGS__;))
@@ -720,6 +752,7 @@ namespace STDEXEC
 // CUDA compilers preinclude cuda_runtime.h, but if we're not compiling for CUDA then we
 // need to include it ourselves.
 #if STDEXEC_HAS_CTK() && !STDEXEC_CUDA_COMPILATION()
+// TODO: probably wrong with modules, but do nv-prefixed builds care?
 #  include <cuda_runtime_api.h>
 #endif
 
@@ -759,6 +792,7 @@ namespace STDEXEC
 
 // clang-format on
 
+#if !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)
 namespace STDEXEC
 {
   // Used by the STDEXEC_CATCH macro to provide a stub initialization of the exception object.
@@ -777,6 +811,7 @@ namespace STDEXEC
     STDEXEC_UNREACHABLE();
   }
 }  // namespace STDEXEC
+#endif
 
 #if defined(STDEXEC_ASSERT)
 // nothing to do, user has provided their own assertion macro
@@ -804,6 +839,7 @@ namespace STDEXEC
   struct __assertion_failure
   {};
 
+  STDEXEC_ATTRIBUTE(noreturn, host, device)
   inline void __throw_assertion_failure()
   {
     STDEXEC_THROW(__assertion_failure{});
@@ -903,13 +939,14 @@ namespace STDEXEC
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-#if !defined(STDEXEC_DEMANGLE_SENDER_NAMES) && STDEXEC_MSVC()
+#if !defined(STDEXEC_DEMANGLE_SENDER_NAMES) && (STDEXEC_MSVC() || STDEXEC_USE_MODULES())
 #  define STDEXEC_DEMANGLE_SENDER_NAMES
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // clang-tidy struggles with the CUDA function annotations
 #if STDEXEC_CLANG() && STDEXEC_CUDA_COMPILATION() && defined(STDEXEC_CLANG_TIDY_INVOKED)
+// TODO: probably wrong with modules, but do nv-prefixed builds care?
 #  include <cuda_runtime_api.h>  // IWYU pragma: keep
 #  if !defined(__launch_bounds__)
 #    define __launch_bounds__(...)
@@ -928,5 +965,22 @@ namespace STDEXEC
 #  endif
 #endif
 
+#if STDEXEC_USE_MODULES() && defined(STDEXEC_IN_MODULE_PURVIEW)
+#  define STDEXEC_MODULE_EXPORT export
+#else
+#  define STDEXEC_MODULE_EXPORT
+#endif
+
+// Placeholder until stdexec.meta / stdexec.authoring exist as separate
+// modules; these currently just export into stdexec itself. See #2139
+// (https://github.com/NVIDIA/stdexec/issues/2139)
+#define STDEXEC_MODULE_EXPORT_META      STDEXEC_MODULE_EXPORT
+#define STDEXEC_MODULE_EXPORT_AUTHORING STDEXEC_MODULE_EXPORT
+
+#if !STDEXEC_USE_MODULES()
 namespace STDEXEC
-{}
+{
+  namespace parallel_scheduler_replacement
+  {}
+}  // namespace STDEXEC
+#endif

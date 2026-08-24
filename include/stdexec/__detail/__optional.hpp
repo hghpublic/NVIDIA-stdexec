@@ -15,19 +15,29 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__manual_lifetime.hpp"
-#include "__scope.hpp"
+#  include "__concepts.hpp"
+#  include "__manual_lifetime.hpp"
+#  include "__scope.hpp"
 
-#include <exception>
-#include <memory>
-#include <new>  // IWYU pragma: keep for ::new
-#include <utility>
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#    include <memory>
+#    include <new>  // IWYU pragma: keep for ::new
+#    include <utility>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -53,6 +63,7 @@ namespace STDEXEC
     } __nullopt{};
 
     // A simplified version of std::optional for better compile times
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Tp>
     struct __optional
     {
@@ -251,9 +262,11 @@ namespace STDEXEC
     };
   }  // namespace __opt
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __opt::__optional;
   using __opt::__bad_optional_access;
   using __opt::__nullopt;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

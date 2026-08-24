@@ -16,28 +16,37 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__bulk.hpp"
-#include "__domain.hpp"
-#include "__manual_lifetime.hpp"
-#include "__parallel_scheduler_replacement_api.hpp"
-#include "__schedulers.hpp"
-#include "__sender_introspection.hpp"
-#include "__senders.hpp"
-#include "__transform_completion_signatures.hpp"
-#include "__transform_sender.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include <optional>
-#include <utility>
+import stdexec;
 
-#include "__prologue.hpp"
+#else
 
-#if defined(STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_SIZE)                                               \
-  || defined(STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_ALIGN)                                             \
-  || defined(STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_SIZE)                                         \
-  || defined(STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_ALIGN)
-#  error STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_SIZE, \
+#  include "__execution_fwd.hpp"
+
+#  include "__bulk.hpp"
+#  include "__domain.hpp"
+#  include "__manual_lifetime.hpp"
+#  include "__parallel_scheduler_replacement_api.hpp"
+#  include "__schedulers.hpp"
+#  include "__sender_introspection.hpp"
+#  include "__senders.hpp"
+#  include "__transform_sender.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <optional>
+#    include <utility>
+#  endif
+
+#  include "__prologue.hpp"
+
+#  if defined(STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_SIZE)                                             \
+    || defined(STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_ALIGN)                                           \
+    || defined(STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_SIZE)                                       \
+    || defined(STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_ALIGN)
+#    error STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_SIZE, \
         STDEXEC_SYSTEM_CONTEXT_SCHEDULE_OP_ALIGN, \
         STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_SIZE, and \
         STDEXEC_SYSTEM_CONTEXT_BULK_SCHEDULE_OP_ALIGN \
@@ -47,21 +56,21 @@
         STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_SIZE, and \
         STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_ALIGN, \
         respectively.
-#endif
+#  endif
 
 // TODO: make these configurable by providing policy to the system context
-#ifndef STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_SIZE
-#  define STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_SIZE 72
-#endif
-#ifndef STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_ALIGN
-#  define STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_ALIGN 8
-#endif
-#ifndef STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_SIZE
-#  define STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_SIZE 152
-#endif
-#ifndef STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_ALIGN
-#  define STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_ALIGN 8
-#endif
+#  ifndef STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_SIZE
+#    define STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_SIZE 72
+#  endif
+#  ifndef STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_ALIGN
+#    define STDEXEC_PARALLEL_SCHEDULER_SCHEDULE_OP_ALIGN 8
+#  endif
+#  ifndef STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_SIZE
+#    define STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_SIZE 152
+#  endif
+#  ifndef STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_ALIGN
+#    define STDEXEC_PARALLEL_SCHEDULER_BULK_SCHEDULE_OP_ALIGN 8
+#  endif
 
 namespace STDEXEC
 {
@@ -78,6 +87,7 @@ namespace STDEXEC
     using __sender_data_t = decltype(STDEXEC::sync_wait(std::declval<_Sender>()).value());
   }  // namespace __detail
 
+  STDEXEC_MODULE_EXPORT
   class parallel_scheduler;
   class __parallel_sender;
 
@@ -85,6 +95,7 @@ namespace STDEXEC
   class __parallel_bulk_sender;
 
   /// Returns a scheduler that can add work to the underlying execution context.
+  STDEXEC_MODULE_EXPORT
   auto get_parallel_scheduler() -> parallel_scheduler;
 
   /// Concept that matches `bulk_chunked` and `bulk_unchunked` senders.
@@ -634,12 +645,6 @@ namespace STDEXEC
   template <bool _IsUnchunked, sender _Previous, std::integral _Size, class _Fn, bool _Parallelize>
   class __parallel_bulk_sender
   {
-    /// Meta-function that returns the completion signatures of `this`.
-    template <class _Self, class... _Env>
-    using __completions_t = __transform_completion_signatures_t<
-      __completion_signatures_of_t<__copy_cvref_t<_Self, _Previous>, _Env...>,
-      completion_signatures<set_error_t(std::exception_ptr)>>;
-
     template <bool, sender, std::integral, class, class, bool>
     friend struct __detail::__system_bulk_op;
 
@@ -694,9 +699,11 @@ namespace STDEXEC
 
     /// Gets the completion signatures for this sender.
     template <__decays_to<__parallel_bulk_sender> _Self, class... _Env>
-    static consteval auto get_completion_signatures() -> __completions_t<_Self, _Env...>
+    static consteval auto get_completion_signatures()
     {
-      return {};
+      using __cv_previous_t = __copy_cvref_t<_Self, _Previous>;
+      auto __completions    = STDEXEC::get_completion_signatures<__cv_previous_t, _Env...>();
+      return STDEXEC::__concat_completion_signatures(__completions, __eptr_completion_t());
     }
 
    private:
@@ -802,20 +809,21 @@ namespace STDEXEC
   }
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
 
-#if defined(STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY)
-#  define STDEXEC_PARALLEL_SCHEDULER_INLINE inline
-#  include "__parallel_scheduler_default_impl_entry.hpp"
-#elif defined(STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY)
-#  if STDEXEC_MSVC()
-#    pragma message("WARNING: STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY has been renamed to "             \
-                    "STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY.")
-#  else
-#    warning "STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY has been renamed to "                             \
+#  if defined(STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY) || STDEXEC_USE_MODULES()
+#    define STDEXEC_PARALLEL_SCHEDULER_INLINE inline
+#    include "__parallel_scheduler_default_impl_entry.hpp"
+#  elif defined(STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY)
+#    if STDEXEC_MSVC()
+#      pragma message("WARNING: STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY has been renamed to "           \
+                      "STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY.")
+#    else
+#      warning "STDEXEC_SYSTEM_CONTEXT_HEADER_ONLY has been renamed to "                           \
              "STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY."
+#    endif
+#    define STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY
+#    define STDEXEC_PARALLEL_SCHEDULER_INLINE inline
+#    include "__parallel_scheduler_default_impl_entry.hpp"
 #  endif
-#  define STDEXEC_PARALLEL_SCHEDULER_HEADER_ONLY
-#  define STDEXEC_PARALLEL_SCHEDULER_INLINE inline
-#  include "__parallel_scheduler_default_impl_entry.hpp"
-#endif
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

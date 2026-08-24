@@ -20,8 +20,8 @@
 
 #include <exception>
 
-#include <catch2/catch_all.hpp>
 #include <stdexec/execution.hpp>
+#include <test_common/catch2.hpp>
 
 #include "../test_common/receivers.hpp"
 #include "../test_common/type_helpers.hpp"
@@ -72,6 +72,15 @@ namespace
                                                       ::STDEXEC::set_stopped_t()>>);
     auto op = ::STDEXEC::connect(sender, expect_stopped_receiver(env));
     ::STDEXEC::start(op);
+  }
+
+  TEST_CASE("request_stop reports whether it made a stop request", "[stop_token]")
+  {
+    ::STDEXEC::inplace_stop_source source;
+
+    CHECK(source.request_stop());
+    CHECK(source.stop_requested());
+    CHECK_FALSE(source.request_stop());
   }
 
   TEST_CASE("No op when the associated stop token is unstoppable", "[unless_stop_requested]")

@@ -16,24 +16,32 @@
  */
 #pragma once
 
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
 // This file assumes STDEXEC_PARALLEL_SCHEDULER_INLINE is defined before including it. But
 // clang-tidy and doxygen don't know that, so we need to include the header that defines
 // it when clang-tidy and doxygen are invoked.
-#if defined(STDEXEC_CLANG_TIDY_INVOKED) || defined(STDEXEC_DOXYGEN_INVOKED)
-#  include "__parallel_scheduler.hpp"  // IWYU pragma: keep
-#endif
+#  if defined(STDEXEC_CLANG_TIDY_INVOKED) || defined(STDEXEC_DOXYGEN_INVOKED)
+#    include "__parallel_scheduler.hpp"  // IWYU pragma: keep
+#  endif
 
-#if !defined(STDEXEC_PARALLEL_SCHEDULER_INLINE)
-#  error "STDEXEC_PARALLEL_SCHEDULER_INLINE must be defined before including this header"
-#endif
+#  if !defined(STDEXEC_PARALLEL_SCHEDULER_INLINE)
+#    error "STDEXEC_PARALLEL_SCHEDULER_INLINE must be defined before including this header"
+#  endif
 
-#include "__parallel_scheduler_default_impl.hpp"  // IWYU pragma: keep
+#  include "__parallel_scheduler_default_impl.hpp"  // IWYU pragma: keep
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
+STDEXEC_MODULE_EXPORT
 namespace STDEXEC::parallel_scheduler_replacement
 {
-
   /// Get the backend for the parallel scheduler.
   /// Users might replace this function.
   STDEXEC_PARALLEL_SCHEDULER_INLINE auto
@@ -55,4 +63,5 @@ namespace STDEXEC::parallel_scheduler_replacement
   }
 }  // namespace STDEXEC::parallel_scheduler_replacement
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

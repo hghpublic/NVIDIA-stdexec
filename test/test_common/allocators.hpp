@@ -15,11 +15,17 @@
  */
 
 #pragma once
-
 #include <catch2/catch_all.hpp>
-#include <stdexec/execution.hpp>
 
-#include <new>
+#include <stdexec/__detail/__config.hpp>
+
+#if STDEXEC_USE_MODULES()
+import std;
+import stdexec;
+#else
+#  include <new>
+#  include <stdexec/execution.hpp>
+#endif
 
 namespace ex = STDEXEC;
 

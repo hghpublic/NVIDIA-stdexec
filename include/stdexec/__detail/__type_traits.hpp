@@ -17,27 +17,37 @@
 
 #include "__config.hpp"
 
-#include <exception>    // IWYU pragma: keep for std::terminate
-#include <type_traits>  // IWYU pragma: export
-#include <utility>      // IWYU pragma: keep
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>    // IWYU pragma: keep for std::terminate
+#    include <type_traits>  // IWYU pragma: export
+#    include <utility>      // IWYU pragma: keep
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // A very simple std::declval replacement that doesn't handle void
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tp, bool _Noexcept = true>
   using __declfn_t = auto (*)() noexcept(_Noexcept) -> _Tp;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tp, class...>
   extern __declfn_t<_Tp &&> __declval;
 
   template <class... _NoneSuch>
   extern __declfn_t<void> __declval<void, _NoneSuch...>;
 
-#if STDEXEC_MSVC()
+#  if STDEXEC_MSVC()
   template <class _Tp, bool _Noexcept = true>
   _Tp __declfn_() noexcept(_Noexcept)
   {
@@ -49,14 +59,14 @@ namespace STDEXEC
   {
     return &__declfn_<_Tp, _Noexcept>;
   }
-#else
+#  else
   template <class _Tp, bool _Noexcept = true>
   using __declfn = __declfn_t<_Tp, _Noexcept>;
-#endif
+#  endif
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // __decay_t: An efficient implementation for std::decay
-#if STDEXEC_HAS_BUILTIN(__decay) && (!STDEXEC_CLANG() || STDEXEC_CLANG_VERSION >= 2100)
+#  if STDEXEC_HAS_BUILTIN(__decay) && (!STDEXEC_CLANG() || STDEXEC_CLANG_VERSION >= 2100)
   namespace __tt
   {
     template <class>
@@ -70,15 +80,18 @@ namespace STDEXEC
     };
   }  // namespace __tt
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty>
   using __decay_t = __tt::__decay_<bool(sizeof(__declfn_t<_Ty>))>::template __f<_Ty>;
-#else
+#  else
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty>
   using __decay_t = std::decay_t<_Ty>;
-#endif
+#  endif
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // __copy_cvref_t: For copying cvref from one type to another
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __cp
   {
     template <class _Tp>
@@ -103,6 +116,7 @@ namespace STDEXEC
     using __f = _Tp &&;
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __cpclr
   {
     template <class _Tp>
@@ -130,6 +144,7 @@ namespace STDEXEC
   template <class _Tp>
   using __copy_cvref_fn = decltype(__cpcvr<_Tp>);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _From, class _To>
   using __copy_cvref_t = __copy_cvref_fn<_From>::template __f<_To>;
 
@@ -164,6 +179,7 @@ namespace STDEXEC
   // template <bool _Bp>
   // using __mbool = __mconstant<_Bp>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <bool _Bp>
   struct __mbool : std::bool_constant<_Bp>
   {};
@@ -173,4 +189,5 @@ namespace STDEXEC
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

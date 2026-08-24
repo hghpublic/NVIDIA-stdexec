@@ -15,17 +15,27 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__meta.hpp"
-#include "__tag_invoke.hpp"
-#include "__utility.hpp"
+#  include "__concepts.hpp"
+#  include "__meta.hpp"
+#  include "__tag_invoke.hpp"
+#  include "__utility.hpp"
 
-#include <type_traits>
+#  if !STDEXEC_USE_MODULES()
+#    include <type_traits>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -58,6 +68,7 @@ namespace STDEXEC
   template <class _Query, class _Env, class... _Args>
   concept __has_validation = requires { _Query::template __validate<_Env, _Args...>(); };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Query, auto _Default = __no_default, class _Transform = __q1<__midentity>>
   struct __query  // NOLINT(bugprone-crtp-constructor-accessibility)
     : __query<_Query, __no_default, _Transform>
@@ -112,12 +123,15 @@ namespace STDEXEC
     }
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Env, class _Query, class... _Args>
   concept __queryable_with = __callable<__query<_Query>, _Env &, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Env, class _Query, class... _Args>
   concept __nothrow_queryable_with = __nothrow_callable<__query<_Query>, _Env &, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Env, class _Query, class... _Args>
   using __query_result_t = __call_result_t<__query<_Query>, _Env &, _Args...>;
 
@@ -135,6 +149,7 @@ namespace STDEXEC
   template <class _Tp>
   concept __is_bool_constant = requires { typename __mbool<_Tp::value>; };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Tag>
   concept __forwarding_query = forwarding_query(_Tag{});
 
@@ -177,4 +192,5 @@ STDEXEC_P2300_NAMESPACE_BEGIN()
   inline constexpr forwarding_query_t forwarding_query{};
 STDEXEC_P2300_NAMESPACE_END()
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

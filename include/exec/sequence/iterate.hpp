@@ -18,24 +18,31 @@
 
 #include "../../stdexec/__detail/__config.hpp"
 
-#include "../../stdexec/__detail/__concepts.hpp"
-#include "../../stdexec/__detail/__connect.hpp"
-#include "../../stdexec/__detail/__env.hpp"
-#include "../../stdexec/__detail/__execution_fwd.hpp"
-#include "../../stdexec/__detail/__operation_states.hpp"
-#include "../../stdexec/__detail/__optional.hpp"
-#include "../../stdexec/__detail/__receivers.hpp"
-#include "../../stdexec/__detail/__schedulers.hpp"
-#include "../../stdexec/__detail/__sender_concepts.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+import std;
+import stdexec;
+#else
+#  include "../../stdexec/__detail/__execution_fwd.hpp"
 
-#include "../detail/basic_sequence.hpp"
-#include "../sender_for.hpp"
-#include "../sequence.hpp"
-#include "../sequence_senders.hpp"
-#include "../trampoline_scheduler.hpp"
+#  include "../../stdexec/__detail/__concepts.hpp"
+#  include "../../stdexec/__detail/__connect.hpp"
+#  include "../../stdexec/__detail/__env.hpp"
+#  include "../../stdexec/__detail/__operation_states.hpp"
+#  include "../../stdexec/__detail/__optional.hpp"
+#  include "../../stdexec/__detail/__receivers.hpp"
+#  include "../../stdexec/__detail/__schedulers.hpp"
+#  include "../../stdexec/__detail/__sender_concepts.hpp"
 
-#include <exception>
-#include <ranges>
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#    include <ranges>
+#  endif
+
+#  include "../detail/basic_sequence.hpp"
+#  include "../sender_for.hpp"
+#  include "../sequence.hpp"
+#  include "../sequence_senders.hpp"
+#  include "../trampoline_scheduler.hpp"
 
 namespace experimental::execution
 {
@@ -171,7 +178,12 @@ namespace experimental::execution
     struct __subscribe_fn
     {
       template <class _Range>
-      constexpr auto operator()(__ignore, _Range&& __range) noexcept
+      constexpr auto operator()(__ignore, _Range&& __range)
+        noexcept(noexcept(std::ranges::begin(static_cast<_Range&&>(__range)))
+                 && noexcept(std::ranges::end(static_cast<_Range&&>(__range)))
+                 && __nothrow_move_constructible<std::ranges::iterator_t<_Range>,
+                                                 std::ranges::sentinel_t<_Range>,
+                                                 _Receiver>)
       {
         return __operation{std::ranges::begin(static_cast<_Range&&>(__range)),
                            std::ranges::end(static_cast<_Range&&>(__range)),
@@ -181,6 +193,7 @@ namespace experimental::execution
       _Receiver __rcvr_;
     };
 
+    STDEXEC_MODULE_EXPORT
     struct iterate_t
     {
       template <std::ranges::forward_range _Range>
@@ -243,8 +256,10 @@ namespace experimental::execution
     };
   }  // namespace __iterate
 
+  STDEXEC_MODULE_EXPORT
   using __iterate::iterate_t;
   inline constexpr iterate_t iterate{};
 }  // namespace experimental::execution
 
 namespace exec = experimental::execution;
+#endif

@@ -15,19 +15,29 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__concepts.hpp"
-#include "__meta.hpp"
-#include "__query.hpp"
-#include "__tag_invoke.hpp"
-#include "__tuple.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include <exception>   // IWYU pragma: keep for std::terminate
-#include <functional>  // IWYU pragma: keep for unwrap_reference_t
-#include <type_traits>
+import stdexec;
 
-#include "__prologue.hpp"
+#else
+
+#  include "__execution_fwd.hpp"
+
+#  include "__concepts.hpp"
+#  include "__meta.hpp"
+#  include "__query.hpp"
+#  include "__tag_invoke.hpp"
+#  include "__tuple.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>   // IWYU pragma: keep for std::terminate
+#    include <functional>  // IWYU pragma: keep for unwrap_reference_t
+#    include <type_traits>
+#  endif
+
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_EDG(probable_guiding_friend)
 STDEXEC_PRAGMA_IGNORE_EDG(type_qualifiers_ignored_on_reference)
@@ -90,6 +100,7 @@ namespace STDEXEC
       }
     };
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Env>
     using __fwd_env_t = __call_result_t<__fwd_fn, _Env>;
 
@@ -122,8 +133,10 @@ namespace STDEXEC
       }
     };
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     inline constexpr __join_fn __join{};
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _First, class... _Second>
     using __join_env_t = __result_of<__join, _First, _Second...>;
 
@@ -136,6 +149,7 @@ namespace STDEXEC
       }
     };
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     struct __root_env
     {
       STDEXEC_ATTRIBUTE(nodiscard, always_inline, host, device)
@@ -157,14 +171,19 @@ namespace STDEXEC
     };
   }  // namespace __env
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __env::__join_env_t;
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __env::__fwd_env_t;
   using __env::__root_t;
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __env::__root_env;
 
-  inline constexpr __env::__fwd_fn         __fwd_env{};
+  inline constexpr __env::__fwd_fn __fwd_env{};
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr __env::__as_root_env_fn __as_root_env{};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Env>
   using __as_root_env_t = __result_of<__as_root_env, _Env>;
 
@@ -222,6 +241,8 @@ namespace STDEXEC
           sizeof...(_Envs) - __mcall<__mfind_if<__q1<__has_query_t>, __msize>, _Envs...>::value;
         if constexpr (__index < sizeof...(_Envs))
           return STDEXEC::__get<__index>(__env);
+        else
+          return void();
       }
     };
   }  // namespace __detail
@@ -371,4 +392,5 @@ namespace STDEXEC
   concept __environment_provider = __minvocable_q<__call_result_t, get_env_t, _EnvProvider const &>;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

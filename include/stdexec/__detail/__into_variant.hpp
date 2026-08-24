@@ -15,22 +15,32 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__basic_sender.hpp"
-#include "__concepts.hpp"
-#include "__meta.hpp"
-#include "__sender_adaptor_closure.hpp"
-#include "__senders.hpp"  // IWYU pragma: keep for __well_formed_sender
-#include "__transform_completion_signatures.hpp"
-#include "__utility.hpp"
+#  include "__basic_sender.hpp"
+#  include "__concepts.hpp"
+#  include "__meta.hpp"
+#  include "__sender_adaptor_closure.hpp"
+#  include "__senders.hpp"
+#  include "__transform_completion_signatures.hpp"
+#  include "__utility.hpp"
 
-#include <exception>
-#include <tuple>
-#include <variant>  // IWYU pragma: keep
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#    include <tuple>
+#    include <variant>  // IWYU pragma: keep
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -38,25 +48,6 @@ namespace STDEXEC
   // [exec.into.variant]
   namespace __into_variant
   {
-    template <class _Sender, class _Env>
-      requires sender_in<_Sender, _Env>
-    using __into_variant_result_t = value_types_of_t<_Sender, _Env>;
-
-    template <class _Sender, class... _Env>
-    using __variant_t = __value_types_t<__completion_signatures_of_t<_Sender, _Env...>,
-                                        __qq<__decayed_std_tuple>,
-                                        __qq<__std_variant>>;
-
-    template <class _Variant>
-    using __variant_completions =
-      completion_signatures<set_value_t(_Variant), set_error_t(std::exception_ptr)>;
-
-    template <class _Sender, class... _Env>
-    using __completions = __transform_completion_signatures_t<
-      __completion_signatures_of_t<_Sender, _Env...>,
-      __minvoke_q<__variant_completions, __variant_t<_Sender, _Env...>>,
-      __mconst<completion_signatures<>>::__f>;
-
     template <class _Receiver, class _Variant>
     struct __state
     {
@@ -104,7 +95,19 @@ namespace STDEXEC
       static consteval auto __get_completion_signatures()
       {
         static_assert(__sender_for<_Self, into_variant_t>);
-        return __completions<__child_of<_Self>, _Env...>{};
+        auto __completions = STDEXEC::get_completion_signatures<__child_of<_Self>, _Env...>();
+        STDEXEC_IF_OK(__completions)
+        {
+          using __completions_t = decltype(__completions);
+          using __variant_t =
+            __value_types_t<__completions_t, __qq<__decayed_std_tuple>, __qq<__std_variant>>;
+          return STDEXEC::__transform_completion_signatures(
+            __completions,
+            __ignore_completion(),
+            {},
+            {},
+            completion_signatures<set_value_t(__variant_t), set_error_t(std::exception_ptr)>());
+        }
       };
     };
   }  // namespace __into_variant
@@ -228,4 +231,5 @@ namespace STDEXEC
   {};
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

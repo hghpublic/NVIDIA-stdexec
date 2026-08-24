@@ -15,15 +15,23 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__domain.hpp"
-#include "__meta.hpp"
-#include "__type_traits.hpp"
+#  include "__concepts.hpp"
+#  include "__domain.hpp"
+#  include "__meta.hpp"
+#  include "__type_traits.hpp"
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_EDG(type_qualifiers_ignored_on_reference)
 
@@ -34,7 +42,7 @@ namespace STDEXEC
   namespace __detail
   {
     template <class _Domain, class _OpTag>
-    struct __transform_sender_t
+    struct __transform_sender
     {
       template <class _Sndr, class _Env>
       using __domain_for_t =
@@ -65,7 +73,7 @@ namespace STDEXEC
         else
         {
           using __transform_recurse_t =
-            __transform_sender_t<__completing_domain_t<void, __result_t, _Env>, set_value_t>;
+            __transform_sender<__completing_domain_t<void, __result_t, _Env>, set_value_t>;
           return __transform_recurse_t::template __get_declfn<__result_t,
                                                               _Env,
                                                               (_Nothrow && __is_nothrow)>();
@@ -102,7 +110,7 @@ namespace STDEXEC
         else
         {
           using __transform_recurse_t =
-            __transform_sender_t<__completing_domain_t<void, __result_t, _Env>, set_value_t>;
+            __transform_sender<__completing_domain_t<void, __result_t, _Env>, set_value_t>;
           return __transform_recurse_t()(__domain_t().transform_sender(_OpTag(),
                                                                        static_cast<_Sndr&&>(__sndr),
                                                                        __env),
@@ -133,28 +141,27 @@ namespace STDEXEC
     // 2. Starting domain transformation (where the operation state starts)
     template <class _Sndr, class _Env>
     using __impl_fn_t =
-      __compose<__detail::__transform_sender_t<__detail::__starting_domain_t<_Env>, start_t>,
-                __detail::__transform_sender_t<__detail::__completing_domain_t<void, _Sndr, _Env>,
-                                               set_value_t>>;
+      __compose<__detail::__transform_sender<__detail::__starting_domain_t<_Env>, start_t>,
+                __detail::__transform_sender<__detail::__completing_domain_t<void, _Sndr, _Env>,
+                                             set_value_t>>;
 
    public:
     // NOT TO SPEC:
     template <class _Sndr>
     STDEXEC_ATTRIBUTE(nodiscard, host, device, always_inline)
-    constexpr auto
-    operator()(_Sndr&& __sndr) const noexcept(__nothrow_move_constructible<_Sndr>)  //
-      -> _Sndr
+    constexpr auto operator()(_Sndr&& __sndr) const  //
+      noexcept(__nothrow_move_constructible<_Sndr>) -> _Sndr
     {
       return static_cast<_Sndr&&>(__sndr);
     }
 
-    template <class _Sndr, class _Env, auto _ImplFn = __impl_fn_t<_Sndr, _Env>{}>
+    template <class _Sndr, class _Env, class _ImplFn = __impl_fn_t<_Sndr, _Env>>
     STDEXEC_ATTRIBUTE(nodiscard, host, device, always_inline)
-    constexpr auto operator()(_Sndr && __sndr, _Env const & __env) const
-      noexcept(noexcept(_ImplFn(static_cast<_Sndr&&>(__sndr), __env)))
-        -> decltype(_ImplFn(static_cast<_Sndr&&>(__sndr), __env))
+    constexpr auto operator()(_Sndr&& __sndr, _Env const & __env) const
+      noexcept(__nothrow_callable<_ImplFn, _Sndr, _Env const &>)
+        -> __call_result_t<_ImplFn, _Sndr, _Env const &>
     {
-      return _ImplFn(static_cast<_Sndr&&>(__sndr), __env);
+      return _ImplFn()(static_cast<_Sndr&&>(__sndr), __env);
     }
   };
 
@@ -168,7 +175,7 @@ namespace STDEXEC
 
   /////////////////////////////////////////////////////////////////////////////
   // [exec.snd.apply]
-  inline constexpr struct apply_sender_t
+  STDEXEC_MODULE_EXPORT inline constexpr struct apply_sender_t
   {
     template <class _Domain, class _Tag, class _Sender, class... _Args>
       requires __has_implementation_for<_Tag, _Domain, _Sender, _Args...>
@@ -191,14 +198,16 @@ namespace STDEXEC
     }
   } apply_sender{};
 
-  template <class _Domain, class _Tag, class _Sender, class... _Args>
+  STDEXEC_MODULE_EXPORT template <class _Domain, class _Tag, class _Sender, class... _Args>
   using apply_sender_result_t = __call_result_t<apply_sender_t, _Domain, _Tag, _Sender, _Args...>;
 
   /////////////////////////////////////////////////////////////////////////////
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Sender, class _Scheduler, class _Env, class _Tag = set_value_t>
   concept __completes_on =
     __decays_to<__call_result_t<get_completion_scheduler_t<_Tag>, env_of_t<_Sender>, _Env>,
                 _Scheduler>;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

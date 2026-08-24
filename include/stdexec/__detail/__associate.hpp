@@ -16,27 +16,35 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
-
-#include "__basic_sender.hpp"
-#include "__completion_signatures.hpp"
-#include "__concepts.hpp"
 #include "__config.hpp"
-#include "__operation_states.hpp"
-#include "__receivers.hpp"
-#include "__scope_concepts.hpp"
-#include "__sender_adaptor_closure.hpp"
-#include "__sender_concepts.hpp"
-#include "__sender_introspection.hpp"
-#include "__senders.hpp"
-#include "__transform_completion_signatures.hpp"
-#include "__type_traits.hpp"
 
-#include <memory>
-#include <type_traits>
-#include <utility>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
+
+#  include "__basic_sender.hpp"
+#  include "__completion_signatures.hpp"
+#  include "__concepts.hpp"
+#  include "__operation_states.hpp"
+#  include "__receivers.hpp"
+#  include "__scope_concepts.hpp"
+#  include "__sender_adaptor_closure.hpp"
+#  include "__sender_concepts.hpp"
+#  include "__sender_introspection.hpp"
+#  include "__senders.hpp"
+#  include "__type_traits.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <memory>
+#    include <type_traits>
+#    include <utility>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -147,6 +155,7 @@ namespace STDEXEC
     __associate_data(_Token, _Sender&&) -> __associate_data<_Token, _Sender>;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    STDEXEC_MODULE_EXPORT
     struct associate_t
     {
       template <sender _Sender, scope_token _Token>
@@ -236,24 +245,23 @@ namespace STDEXEC
 
     struct __associate_impl : __sexpr_defaults
     {
-#if 0  // TODO: I don't know how to implement this correctly
+#  if 0  // TODO: I don't know how to implement this correctly
       static constexpr auto __get_attrs = []<class _Child>(__ignore, const _Child& __child) noexcept {
         return __sync_attrs{__child};
       };
-#endif
+#  endif
 
       template <class _Sender>
       using __wrap_sender_of_t =
         __copy_cvref_t<_Sender, typename __data_of<std::remove_cvref_t<_Sender>>::__wrap_sender_t>;
 
       template <class _Sender, class... _Env>
-      static consteval auto __get_completion_signatures()  //
-        -> __transform_completion_signatures_t<
-          __completion_signatures_of_t<__wrap_sender_of_t<_Sender>, _Env...>,
-          completion_signatures<set_stopped_t()>>
+      static consteval auto __get_completion_signatures()
       {
         static_assert(__sender_for<_Sender, associate_t>);
-        return {};
+        return STDEXEC::__concat_completion_signatures(
+          STDEXEC::get_completion_signatures<__wrap_sender_of_t<_Sender>, _Env...>(),
+          completion_signatures<set_stopped_t()>());
       };
 
       static constexpr auto __get_state =
@@ -276,11 +284,13 @@ namespace STDEXEC
     };
   }  // namespace __associate
 
+  STDEXEC_MODULE_EXPORT
   using __associate::associate_t;
 
   /// @brief The associate sender adaptor, which associates a sender with the
   ///        async scope referred to by the given token
   /// @hideinitializer
+  STDEXEC_MODULE_EXPORT
   inline constexpr associate_t associate{};
 
   template <>
@@ -288,4 +298,5 @@ namespace STDEXEC
   {};
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

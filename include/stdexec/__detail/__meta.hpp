@@ -15,18 +15,27 @@
  */
 #pragma once
 
-#include "__concepts.hpp"
 #include "__config.hpp"
-#include "__type_traits.hpp"
-#include "__typeinfo.hpp"
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <cstddef>
-#include <type_traits>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__concepts.hpp"
+#  include "__type_traits.hpp"
+#  include "__typeinfo.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <algorithm>
+#    include <array>
+#    include <cassert>
+#    include <cstddef>
+#    include <type_traits>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -41,23 +50,26 @@ namespace STDEXEC
   template <class _Ret, class... _Args>
   using __fn_ptr_t = _Ret (*)(_Args...);
 
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   concept __mnever = false;
 
-#if STDEXEC_GCC() && STDEXEC_GCC_VERSION < 1300
+#  if STDEXEC_GCC() && STDEXEC_GCC_VERSION < 1300
   template <auto _Value>
   using __mtypeof = std::remove_const_t<decltype(_Value)>;
-#else
+#  else
   template <auto _Value>
   using __mtypeof = decltype(_Value);
-#endif
+#  endif
 
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   struct __mlist;
 
   template <class... _Ts>
   using __mlist_ptr = __mlist<_Ts...> *;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Tp>
   using __midentity = _Tp;
 
@@ -90,6 +102,7 @@ namespace STDEXEC
   template <class _Tp, class _Up>
   using __msecond = _Up;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   struct __undefined;
 
@@ -99,7 +112,7 @@ namespace STDEXEC
   template <std::size_t... _Is>
   using __indices = __iota<_Is...> *;
 
-#if STDEXEC_MSVC()
+#  if STDEXEC_MSVC()
   namespace __pack
   {
     template <class _Ty, _Ty... _Is>
@@ -115,7 +128,7 @@ namespace STDEXEC
   template <std::size_t _Np>
   using __make_indices =
     decltype(__pack::__mkidx<__make_integer_seq<__pack::__idx, std::size_t, _Np>>);
-#elif STDEXEC_HAS_BUILTIN(__make_integer_seq)
+#  elif STDEXEC_HAS_BUILTIN(__make_integer_seq)
   namespace __pack
   {
     template <class _Ty, _Ty... _Is>
@@ -124,7 +137,7 @@ namespace STDEXEC
 
   template <std::size_t _Np>
   using __make_indices = __make_integer_seq<__pack::__idx, std::size_t, _Np>;
-#elif STDEXEC_HAS_BUILTIN(__integer_pack)
+#  elif STDEXEC_HAS_BUILTIN(__integer_pack)
   namespace __pack
   {
     template <std::size_t _Np>
@@ -133,7 +146,7 @@ namespace STDEXEC
 
   template <std::size_t _Np>
   using __make_indices = decltype(__pack::__make_indices<_Np>);
-#else
+#  else
   namespace __pack
   {
     template <std::size_t _Np, class _Idx = __indices<>>
@@ -154,11 +167,12 @@ namespace STDEXEC
 
   template <std::size_t _Np>
   using __make_indices = decltype(__pack::__mk_indices<_Np>);
-#endif
+#  endif
 
   template <class... _Ts>
   using __indices_for = __make_indices<sizeof...(_Ts)>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __ignore
   {
     constexpr __ignore() = default;
@@ -169,12 +183,14 @@ namespace STDEXEC
     {}
   };
 
+  STDEXEC_MODULE_EXPORT_META
   using __msuccess = int;
 
   template <class _What, class... _With>
   struct _WARNING_
   {};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _What>
   struct _ERROR_
   {
@@ -206,9 +222,11 @@ namespace STDEXEC
     }
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class... _What>
   using __mexception = _ERROR_<_What...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class>
   extern __msuccess __ok_v;
 
@@ -221,18 +239,23 @@ namespace STDEXEC
   template <class _Ty>
   using __ok_t = decltype(__ok_v<_Ty>);
 
+  STDEXEC_MODULE_EXPORT_META
   template <class... _Ts>
   using __mfind_error = decltype((__ok_t<_Ts>(), ..., __msuccess()));
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Arg>
   concept __ok = STDEXEC_IS_SAME(__ok_t<_Arg>, __msuccess);
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Arg>
   concept __merror = !STDEXEC_IS_SAME(__ok_t<_Arg>, __msuccess);
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class... _Args>
   using __mcall = _Fn::template __f<_Args...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class _Arg>
   using __mcall1 = _Fn::template __f<_Arg>;
 
@@ -307,9 +330,11 @@ namespace STDEXEC
   //! Metafunction invocation
   //! Given a metafunction, `_Fn`, and args.
   //! We expect `_Fn::__f` to be type alias template "implementing" the metafunction `_Fn`.
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class... _Args>
   using __minvoke = __i<_Ok<_Fn, _Args...>>::template __f<_Fn, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Fn>
   struct __qq
   {
@@ -317,6 +342,7 @@ namespace STDEXEC
     using __f = _Fn<_Args...>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class> class _Fn>
   struct __q1
   {
@@ -341,6 +367,7 @@ namespace STDEXEC
   //!
   //! This design lets us report type errors briefly at the library boundary, even if the
   //! actual error happens deep inside a meta-program.
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Fn>
   struct __q
   {
@@ -362,6 +389,7 @@ namespace STDEXEC
     using __f = _Error;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Fn, class... _Front>
   struct __mbind_front_q
   {
@@ -369,9 +397,11 @@ namespace STDEXEC
     using __f = __minvoke_q<_Fn, _Front..., _Args...>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class... _Front>
   using __mbind_front = __mbind_front_q<_Fn::template __f, _Front...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Fn, class... _Back>
   struct __mbind_back_q
   {
@@ -382,6 +412,7 @@ namespace STDEXEC
   template <class _Fn, class... _Back>
   using __mbind_back = __mbind_back_q<_Fn::template __f, _Back...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Tp, class... _Args>
   concept __minvocable_q = requires { typename __minvoke_q<_Tp, _Args...>; };
 
@@ -417,15 +448,15 @@ namespace STDEXEC
   template <template <class...> class _Fn, class... _Args>
   using __mmemoize_q = __mmemoize<__q<_Fn>, _Args...>;
 
-#if STDEXEC_GCC() || (STDEXEC_CLANG() && STDEXEC_CLANG_VERSION < 1800)
+#  if STDEXEC_GCC() || (STDEXEC_CLANG() && STDEXEC_CLANG_VERSION < 1800)
   // GCC and Clang < 18 cannot mangle builtins. __mmangle_t introduces an indirection
   // that hides the builtin from the mangler.
   template <template <class...> class _Fn, class... _Args>
   using __mmangle_t = __mmemoize_q<_Fn, _Args...>;
-#else
+#  else
   template <template <class...> class _Fn, class... _Args>
   using __mmangle_t = _Fn<_Args...>;
-#endif
+#  endif
 
   namespace __detail
   {
@@ -453,15 +484,18 @@ namespace STDEXEC
   template <class _Pred, class _Then, class _Else>
   using __if = __minvoke_q<__detail::__if_t, _Pred, _Then, _Else>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <bool _Pred, class _Then, class _Else>
   using __if_c = __minvoke<__detail::__if_<_Pred>, _Then, _Else>;
 
   template <class _Pred, class _Then, class _Else, class... _Args>
   using __minvoke_if = __minvoke<__if<_Pred, _Then, _Else>, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <bool _Pred, class _Then, class _Else, class... _Args>
   using __minvoke_if_c = __minvoke<__if_c<_Pred, _Then, _Else>, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Tp>
   struct __mconst
   {
@@ -483,9 +517,11 @@ namespace STDEXEC
     using __f = __minvoke_if_c<__minvocable<_Try, _Args...>, _Try, _Catch, _Args...>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class _Default>
   using __mwith_default = __mtry_catch<_Fn, __mconst<_Default>>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <template <class...> class _Fn, class _Default>
   using __mwith_default_q = __mtry_catch_q<_Fn, __mconst<_Default>>;
 
@@ -495,6 +531,7 @@ namespace STDEXEC
   template <template <class...> class _Fn, class _Default, class... _Args>
   using __minvoke_or_q = __minvoke<__mwith_default_q<_Fn, _Default>, _Args...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class _Continuation = __q<__mlist>>
   struct __mtransform
   {
@@ -585,6 +622,7 @@ namespace STDEXEC
     using __f = _ERROR_<_What...>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Fn, class _List>
   using __mapply = __mcall1<__mfor<_List>, _Fn>;
 
@@ -648,6 +686,7 @@ namespace STDEXEC
     using __f = __mapply<_Continuation, __mconcat_result_t<__mlist<>, _Args...>>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   struct __msize
   {
     template <class... _Ts>
@@ -674,6 +713,7 @@ namespace STDEXEC
     using __f = __msize_t<(bool(__minvoke<_Fn, _Ts>::value) + ... + 0)>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Tp>
   struct __mcontains
   {
@@ -688,6 +728,7 @@ namespace STDEXEC
     using __f = __mapply<__mbind_back<_Continuation, _Item>, _List>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   struct __mcompose
   {};
@@ -740,6 +781,7 @@ namespace STDEXEC
                           __if<__minvoke<_Pred, _Args>, __mlist<>, __mlist<_Args>>...>;
   };
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Return>
   struct __qf
   {
@@ -747,7 +789,7 @@ namespace STDEXEC
     using __f = _Return(_Args...);
   };
 
-#if !STDEXEC_NO_STDCPP_PACK_INDEXING()
+#  if !STDEXEC_NO_STDCPP_PACK_INDEXING()
   STDEXEC_PRAGMA_PUSH()
   STDEXEC_PRAGMA_IGNORE_GNU("-Wc++26-extensions")
 
@@ -765,7 +807,7 @@ namespace STDEXEC
   using __m_at_c = __minvoke<__m_at_<_Np == ~0ul>, __msize_t<_Np>, _Ts...>;
 
   STDEXEC_PRAGMA_POP()
-#elif STDEXEC_HAS_BUILTIN(__type_pack_element)
+#  elif STDEXEC_HAS_BUILTIN(__type_pack_element)
   template <bool>
   struct __m_at_
   {
@@ -778,7 +820,7 @@ namespace STDEXEC
 
   template <std::size_t _Np, class... _Ts>
   using __m_at_c = __minvoke<__m_at_<_Np == ~0ul>, __msize_t<_Np>, _Ts...>;
-#else
+#  else
   template <std::size_t>
   using __void_ptr = void *;
 
@@ -802,7 +844,7 @@ namespace STDEXEC
 
   template <class _Np, class... _Ts>
   using __m_at = __m_at_c<_Np::value, _Ts...>;
-#endif
+#  endif
 
   namespace __detail
   {
@@ -810,6 +852,7 @@ namespace STDEXEC
     using __mfront_ = _Ty;
   }  // namespace __detail
 
+  STDEXEC_MODULE_EXPORT_META
   template <class... _As>
   using __mfront = __minvoke_q<__detail::__mfront_, _As...>;
 
@@ -894,6 +937,7 @@ namespace STDEXEC
 
   template <class... _Booleans>
   using __mand_t = __mbool<(_Booleans::value && ...)>;
+  STDEXEC_MODULE_EXPORT_META
   template <class... _Booleans>
   using __mand = __minvoke_q<__mand_t, _Booleans...>;
 
@@ -931,6 +975,7 @@ namespace STDEXEC
   template <class _Set, class... _Ty>
   concept __mset_contains = (STDEXEC_IS_BASE_OF(__mtype<_Ty>, _Set) && ...);
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Set, class... _Ty>
   using __mset_contains_t = __mbool<__mset_contains<_Set, _Ty...>>;
 
@@ -976,28 +1021,32 @@ namespace STDEXEC
     };
   }  // namespace __set
 
+  STDEXEC_MODULE_EXPORT_META
   template <class... _Ts>
   using __mset = __set::__inherit<_Ts...>;
 
   template <class _Set, class... _Ts>
   using __mset_insert = decltype(+(__declval<_Set &>() % ... % __declval<__mtype<_Ts> &>()));
 
+  STDEXEC_MODULE_EXPORT_META
   template <class... _Ts>
   using __mmake_set = __mset_insert<__mset<>, _Ts...>;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Set1, class _Set2>
   concept __mset_eq = __mapply<__set::__eq<_Set1>, _Set2>::value;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Continuation = __q<__mlist>>
   struct __munique
   {
-#if STDEXEC_HAS_BUILTIN(__builtin_dedup_pack)
+#  if STDEXEC_HAS_BUILTIN(__builtin_dedup_pack)
     template <class... _Ts>
     using __f = __minvoke<_Continuation, __builtin_dedup_pack<_Ts...>...>;
-#else
+#  else
     template <class... _Ts>
     using __f = __mapply<_Continuation, __mmake_set<_Ts...>>;
-#endif
+#  endif
   };
 
   namespace __detail
@@ -1019,6 +1068,7 @@ namespace STDEXEC
     };
   }  // namespace __detail
 
+  STDEXEC_MODULE_EXPORT_META
   template <class _Continuation = __q<__mlist>>
   struct __msort
   {
@@ -1028,4 +1078,5 @@ namespace STDEXEC
   };
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW

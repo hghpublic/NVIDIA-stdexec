@@ -16,18 +16,26 @@
  */
 #pragma once
 
-#include "../stdexec/__detail/__execution_fwd.hpp"
-
-#include "../stdexec/__detail/__concepts.hpp"
-#include "../stdexec/__detail/__domain.hpp"
-#include "../stdexec/__detail/__env.hpp"
-#include "../stdexec/__detail/__receivers.hpp"
-#include "../stdexec/stop_token.hpp"
+#include "../stdexec/__detail/__config.hpp"
 
 #include "completion_behavior.hpp"
 
-#include <cstddef>
-#include <utility>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+import std;
+import stdexec;
+#else
+#  include "../stdexec/__detail/__execution_fwd.hpp"
+
+#  include "../stdexec/__detail/__concepts.hpp"
+#  include "../stdexec/__detail/__domain.hpp"
+#  include "../stdexec/__detail/__env.hpp"
+#  include "../stdexec/__detail/__receivers.hpp"
+#  include "../stdexec/stop_token.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cstddef>
+#    include <utility>
+#  endif
 
 namespace experimental::execution
 {
@@ -285,15 +293,15 @@ namespace experimental::execution
       while (__head_ != nullptr)
       {
         // pop the head of the list
-#if STDEXEC_NVHPC()
+#  if STDEXEC_NVHPC()
         // there appears to be a codegen bug in nvhpc where the optimizer does not see the
         // assign to __head_ that happens in the std::exchange call below, causing it to
         // erroneously optimize away the `if (__head_ != nullptr)` check later on.
         _Operation* __op = __head_;
         __head_          = __head_->__next_;
-#else
+#  else
         _Operation* __op = std::exchange(__head_, __head_->__next_);
-#endif
+#  endif
         __op->__next_ = nullptr;
         __op->__prev_ = nullptr;
         if (__head_ != nullptr)
@@ -321,3 +329,4 @@ namespace experimental::execution
 }  // namespace experimental::execution
 
 namespace exec = experimental::execution;
+#endif

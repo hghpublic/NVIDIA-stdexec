@@ -16,39 +16,49 @@
  */
 #pragma once
 
-#include "__detail/__atomic.hpp"
-#include "__detail/__query.hpp"
-#include "__detail/__stop_token.hpp"  // IWYU pragma: export
+#include "__detail/__config.hpp"
 
-#include <cstdint>
-#include <thread>
-#include <utility>
-#include <version>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#if __has_include(<stop_token>) && __cpp_lib_jthread >= 201911L
-#  include <stop_token>  // IWYU pragma: export
-#endif
+import stdexec;
+
+#else
+
+#  include "__detail/__atomic.hpp"
+#  include "__detail/__query.hpp"
+#  include "__detail/__stop_token.hpp"  // IWYU pragma: export
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cstdint>
+#    include <thread>
+#    include <utility>
+#    include <version>
+
+#    if __has_include(<stop_token>) && __cpp_lib_jthread >= 201911L
+#      include <stop_token>  // IWYU pragma: export
+#    endif
+#  endif
 
 STDEXEC_PRAGMA_PUSH()
 STDEXEC_PRAGMA_IGNORE_GNU("-Warray-bounds")
 
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#  if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
 extern "C" void _mm_pause();
-#endif
+#  endif
 
 namespace STDEXEC::__stok
 {
   inline void __pause()
   {
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#  if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
     ::_mm_pause();
-#elif defined(__i386__) || defined(__x86_64__) || defined(_M_X64)
+#  elif defined(__i386__) || defined(__x86_64__) || defined(_M_X64)
     asm volatile("pause");
-#elif defined(__aarch64__) || defined(__arm__)
+#  elif defined(__aarch64__) || defined(__arm__)
     asm volatile("yield");
-#elif defined(__powerpc64__)
+#  elif defined(__powerpc64__)
     asm volatile("or 27,27,27");
-#endif
+#  endif
   }
 
   struct __inplace_stop_callback_base
@@ -253,7 +263,7 @@ STDEXEC_P2300_NAMESPACE_BEGIN()
   inline auto inplace_stop_source::request_stop() noexcept -> bool
   {
     if (!__try_lock_unless_stop_requested_(true))
-      return true;
+      return false;
 
     __notifying_thread_ = std::this_thread::get_id();
 
@@ -283,7 +293,7 @@ STDEXEC_P2300_NAMESPACE_BEGIN()
     }
 
     __state_.store(__stop_requested_flag_, STDEXEC::__std::memory_order_release);
-    return false;
+    return true;
   }
 
   inline auto inplace_stop_source::__lock_() const noexcept -> uint8_t
@@ -457,6 +467,7 @@ namespace STDEXEC
     }
   }  // namespace __stok
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _StopSource = inplace_stop_source>
   struct __forward_stop_request
   {
@@ -474,3 +485,4 @@ namespace STDEXEC
 }  // namespace STDEXEC
 
 STDEXEC_PRAGMA_POP()
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

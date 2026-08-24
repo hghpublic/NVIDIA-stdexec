@@ -15,18 +15,28 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__concepts.hpp"
-#include "__diagnostics.hpp"
-#include "__env.hpp"
-#include "__tag_invoke.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "../functional.hpp"
+import stdexec;
 
-#include <exception>
+#else
 
-#include "__prologue.hpp"
+#  include "__execution_fwd.hpp"
+
+#  include "__concepts.hpp"
+#  include "__diagnostics.hpp"
+#  include "__env.hpp"
+#  include "__tag_invoke.hpp"
+
+#  include "../functional.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -373,7 +383,7 @@ namespace STDEXEC
   //! @see stdexec::set_value
   //! @see stdexec::set_error
   //! @see stdexec::set_stopped
-  template <class _Receiver>
+  STDEXEC_MODULE_EXPORT template <class _Receiver>
   concept receiver = __detail::__enable_receiver<__decay_t<_Receiver>>
                   && __environment_provider<__cref_t<_Receiver>>
                   && __nothrow_move_constructible<__decay_t<_Receiver>>
@@ -424,7 +434,7 @@ namespace STDEXEC
   //! @see stdexec::receiver              — without the signature check
   //! @see stdexec::sender_to             — the sender-side mirror of this concept
   //! @see stdexec::completion_signatures — the signature pack this concept consumes
-  template <class _Receiver, class _Completions>
+  STDEXEC_MODULE_EXPORT template <class _Receiver, class _Completions>
   concept receiver_of = receiver<_Receiver> && requires(_Completions *__completions) {
     { __detail::__try_completions<_Receiver>(__completions) } -> __ok;
   };
@@ -495,6 +505,7 @@ namespace STDEXEC
     constexpr void set_stopped() noexcept {}
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Env>
   struct __receiver_archetype : __receiver_archetype_base
   {
@@ -507,4 +518,5 @@ namespace STDEXEC
   };
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

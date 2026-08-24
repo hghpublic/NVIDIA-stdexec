@@ -15,14 +15,23 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
-#include "__scope.hpp"
-#include "__tuple.hpp"
+#include "__config.hpp"
 
-// include these after __execution_fwd.hpp
-#include <memory>  // IWYU pragma: export
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
+#  include "__scope.hpp"
+#  include "__tuple.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <memory>  // IWYU pragma: export
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -69,6 +78,7 @@ namespace STDEXEC
   /////////////////////////////////////////////////////////////////////////////////////////
   // __rebind_allocator: Rebinds an allocator to a different type, unless the allocator is
   // already bound to the correct type, in which case it is returned as-is.
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _Alloc>
   [[nodiscard]]
   constexpr auto __rebind_allocator(_Alloc const &__alloc) noexcept
@@ -137,4 +147,5 @@ namespace STDEXEC
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

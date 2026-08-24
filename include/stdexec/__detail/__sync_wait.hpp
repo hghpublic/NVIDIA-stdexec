@@ -15,29 +15,39 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__concepts.hpp"
-#include "__debug.hpp"  // IWYU pragma: keep
-#include "__diagnostics.hpp"
-#include "__domain.hpp"
-#include "__env.hpp"
-#include "__into_variant.hpp"
-#include "__meta.hpp"
-#include "__receivers.hpp"
-#include "__run_loop.hpp"
-#include "__senders.hpp"
-#include "__transform_sender.hpp"
-#include "__type_traits.hpp"
+#  include "__concepts.hpp"
+#  include "__debug.hpp"  // IWYU pragma: keep
+#  include "__diagnostics.hpp"
+#  include "__domain.hpp"
+#  include "__env.hpp"
+#  include "__into_variant.hpp"
+#  include "__meta.hpp"
+#  include "__receivers.hpp"
+#  include "__run_loop.hpp"
+#  include "__senders.hpp"
+#  include "__transform_sender.hpp"
+#  include "__type_traits.hpp"
 
-#include <exception>
-#include <optional>
-#include <system_error>
-#include <tuple>
-#include <variant>
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#    include <optional>
+#    include <system_error>
+#    include <tuple>
+#    include <variant>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_MSVC(4714)  // marked as __forceinline not inlined
 
@@ -46,6 +56,7 @@ namespace STDEXEC::__sync_wait
   /////////////////////////////////////////////////////////////////////////////
   // [exec.sync.wait]
   // [exec.sync.wait.var]
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __env
   {
     template <__one_of<get_scheduler_t, get_start_scheduler_t, get_delegation_scheduler_t> _Query>
@@ -107,6 +118,16 @@ namespace STDEXEC::__sync_wait
     template <class _Error>
     constexpr void set_error(_Error __err) noexcept
     {
+#  if STDEXEC_NO_STDCPP_EXCEPTIONS()
+      // sync_wait's only way to deliver an error to its caller is to rethrow
+      // it. Without exception support, std::make_exception_ptr returns a null
+      // exception_ptr, which the rethrow path would silently skip -- turning
+      // an error completion into an empty optional, indistinguishable from a
+      // stopped completion. Errors must not masquerade as cancellation:
+      // terminate loudly instead.
+      (void) __err;
+      STDEXEC_TERMINATE();
+#  else
       if constexpr (__same_as<_Error, std::exception_ptr>)
       {
         STDEXEC_ASSERT(__err != nullptr);  // std::exception_ptr must not be null.
@@ -121,6 +142,7 @@ namespace STDEXEC::__sync_wait
         __state_->__eptr_ = std::make_exception_ptr(static_cast<_Error&&>(__err));
       }
       __state_->__loop_.finish();
+#  endif
     }
 
     constexpr void set_stopped() noexcept
@@ -185,7 +207,7 @@ namespace STDEXEC::__sync_wait
 
   template <class _CvSender>
   concept __valid_sync_wait_argument = __ok<__minvoke<
-    __mtry_catch_q<__single_value_variant_sender_t, __q<__too_many_successful_completions_error_t>>,
+    __mtry_catch_q<__single_sender_value_t, __q<__too_many_successful_completions_error_t>>,
     _CvSender,
     __env>>;
 }  // namespace STDEXEC::__sync_wait
@@ -194,68 +216,64 @@ STDEXEC_P2300_NAMESPACE_BEGIN(this_thread)
   ////////////////////////////////////////////////////////////////////////////
   // [exec.sync.wait]
 
-  //! @brief A sender consumer that synchronously blocks the calling thread
-  //!        until a sender completes and returns its result.
+  //! @brief A sender consumer that synchronously blocks the calling thread until a sender
+  //!        completes and returns its result.
   //!
-  //! @c sync_wait is the bridge from the asynchronous sender world back into
-  //! synchronous code. You give it a sender; it connects the sender to a
-  //! built-in receiver, starts the resulting operation, then drives an
-  //! internal @c run_loop on the calling thread until the operation
-  //! completes. The result is returned as a <tt>std::optional</tt> of a
-  //! tuple of the value-completion datums.
+  //! @c sync_wait is the bridge from the asynchronous sender world back into synchronous
+  //! code. You give it a sender; it connects the sender to a built-in receiver, starts
+  //! the resulting operation, then drives an internal @c run_loop on the calling thread
+  //! until the operation completes. The result is returned as a <tt>std::optional</tt> of
+  //! a tuple of the value-completion datums.
   //!
-  //! This is the most common way to "run" a sender in a top-level program or
-  //! a test — it's what you reach for in a @c main() or when synchronously
-  //! waiting on a single sub-pipeline. For fire-and-forget execution, prefer
-  //! @c exec::start_detached or @c stdexec::spawn.
+  //! This is the most common way to "run" a sender in a top-level program or a test —
+  //! it's what you reach for in a @c main() or when synchronously waiting on a single
+  //! sub-pipeline. For fire-and-forget execution, prefer @c stdexec::spawn with a
+  //! counting scope.
   //!
   //! @code{.cpp}
   //! auto [v] = stdexec::sync_wait(stdexec::just(42)).value();
   //! // v == 42
   //! @endcode
   //!
-  //! See [exec.sync.wait] in the C++26 working draft for the normative
-  //! specification.
+  //! See [exec.sync.wait] in the C++26 working draft for the normative specification.
   //!
   //! **Completion behavior.**
   //!
   //! Given an input sender @c sndr that, in some environment, completes with
   //! exactly one of:
   //!
-  //! | Sender completion             | What @c sync_wait does                                          |
-  //! | ----------------------------- | --------------------------------------------------------------- |
-  //! | @c set_value_t(Vs...)         | Returns @c std::optional<std::tuple<Vs...>> engaged.            |
-  //! | @c set_error_t(std::exception_ptr) | Rethrows the exception via @c std::rethrow_exception.     |
-  //! | @c set_error_t(std::error_code)    | Throws @c std::system_error(error_code).                  |
-  //! | @c set_error_t(E)             | Throws @c E directly.                                           |
-  //! | @c set_stopped_t()            | Returns an empty (disengaged) @c std::optional.                 |
+  //! | Sender completion                  | What @c sync_wait does                                |
+  //! | -----------------------------      | ----------------------------------------------------- |
+  //! | @c set_value_t(Vs...)              | Returns @c std::optional<std::tuple<Vs...>> engaged.  |
+  //! | @c set_error_t(std::exception_ptr) | Rethrows the exception via @c std::rethrow_exception. |
+  //! | @c set_error_t(std::error_code)    | Throws @c std::system_error(error_code).              |
+  //! | @c set_error_t(E)                  | Throws @c E directly.                                 |
+  //! | @c set_stopped_t()                 | Returns an empty (disengaged) @c std::optional.       |
   //!
   //! **Single-value-completion requirement.**
   //!
-  //! @c sync_wait *mandates* that its argument sender have exactly one
-  //! @c set_value_t completion signature. A sender that can succeed in more
-  //! than one way (e.g. <tt>just(1) | when_all(just(std::string{"x"}))</tt>
-  //! yielding two distinct tuples) requires @c sync_wait_with_variant
-  //! instead. The static assertion in @c sync_wait will point this out at
-  //! compile time, with a hint to use the variant form.
+  //! @c sync_wait *mandates* that its argument sender have exactly one @c set_value_t
+  //! completion signature. A sender that can succeed in more than one way (e.g.
+  //! <tt>schedule(get_parallel_scheduler()) | let_stopped([] { return just(42); })</tt>
+  //! yielding two distinct value completions) requires @c sync_wait_with_variant instead.
+  //! The static assertion in @c sync_wait will point this out at compile time, with a
+  //! hint to use the variant form.
   //!
   //! **Delegation scheduler.**
   //!
-  //! The internal @c run_loop is exposed via @c get_delegation_scheduler on
-  //! the receiver's environment, so senders that need to enqueue work back
-  //! onto the waiting thread (e.g. continuations after an I/O wait) can do
-  //! so safely. This is what enables algorithms like @c continues_on to
-  //! return execution to the calling thread of @c sync_wait.
+  //! The internal @c run_loop is exposed via @c get_delegation_scheduler on the
+  //! receiver's environment, so senders that need to enqueue work back onto the waiting
+  //! thread (e.g. continuations after an I/O wait) can do so safely. This is useful to
+  //! guarantee that parallel work will make forward progress.
   //!
   //! **When *not* to use** @c sync_wait **:**
-  //! - On any thread that participates in an event loop or executor — you
-  //!   will block it. @c sync_wait is for top-level synchronization
-  //!   (main, tests, leaf utilities), not pipeline composition.
-  //! - When you don't need the result. Use @c exec::start_detached or
-  //!   @c stdexec::spawn for fire-and-forget.
+  //! - On any thread that participates in an event loop or executor — you will block it.
+  //!   @c sync_wait is for top-level synchronization (main, tests, leaf utilities), not
+  //!   pipeline composition.
+  //! - When you don't need the result. Use @c stdexec::spawn with a counting scope for
+  //!   fire-and-forget.
   //!
-  //! @see stdexec::sync_wait_with_variant  — sync_wait for multi-completion senders
-  //! @see exec::start_detached             — fire-and-forget consumer (no result)
+  //! @see stdexec::sync_wait_with_variant  — @c sync_wait for multi-completion senders
   //! @see stdexec::spawn                   — fire-and-forget into a scope
   //! @see stdexec::spawn_future            — spawn into a scope and observe via a sender
   struct sync_wait_t
@@ -514,4 +532,5 @@ STDEXEC_P2300_NAMESPACE_BEGIN(this_thread)
 
 STDEXEC_P2300_NAMESPACE_END(this_thread)
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

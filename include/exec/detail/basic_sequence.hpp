@@ -16,11 +16,16 @@
  */
 #pragma once
 
-#include "../../stdexec/__detail/__basic_sender.hpp"
 #include "../../stdexec/__detail/__config.hpp"
-#include "../../stdexec/__detail/__meta.hpp"
 
-#include "../sequence_senders.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+import stdexec;
+#else
+#  include "../../stdexec/__detail/__basic_sender.hpp"
+#  include "../../stdexec/__detail/__meta.hpp"
+
+#  include "../../stdexec/__detail/__basic_sender_macros.hpp"
+#  include "../sequence_senders.hpp"
 
 namespace experimental::execution
 {
@@ -130,3 +135,4 @@ namespace STDEXEC::__detail
   extern __mtype<__minvoke<decltype(_DescriptorFn()), __q<exec::__basic_sequence_sender_t>>>
     __demangle_v<exec::__seqexpr<_DescriptorFn>>;
 }  // namespace STDEXEC::__detail
+#endif

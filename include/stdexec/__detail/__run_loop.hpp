@@ -15,21 +15,31 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__atomic.hpp"
-#include "__atomic_intrusive_queue.hpp"
-#include "__completion_signatures.hpp"
-#include "__domain.hpp"
-#include "__env.hpp"
-#include "__receivers.hpp"
-#include "__schedulers.hpp"
-#include "__stop_token.hpp"
+#  include "__atomic.hpp"
+#  include "__atomic_intrusive_queue.hpp"
+#  include "__completion_signatures.hpp"
+#  include "__domain.hpp"
+#  include "__env.hpp"
+#  include "__receivers.hpp"
+#  include "__schedulers.hpp"
+#  include "__stop_token.hpp"
 
-#include <cstddef>
+#  if !STDEXEC_USE_MODULES()
+#    include <cstddef>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -59,8 +69,21 @@ namespace STDEXEC
         }
         // drain the queue, taking care to execute any tasks that get added while
         // executing the remaining tasks (also wait for other tasks that might still be in flight):
-        while (__execute_all() || __task_count_.load(__std::memory_order_acquire) > 0)
-          ;
+        while (true)
+        {
+          if (__execute_all())
+          {
+            continue;
+          }
+
+          if (__task_count_.load(__std::memory_order_acquire) == 0)
+          {
+            break;
+          }
+
+          // Another thread still has work in flight. Let it make progress.
+          std::this_thread::yield();
+        }
       }
 
       STDEXEC_ATTRIBUTE(host, device)
@@ -342,6 +365,7 @@ namespace STDEXEC
 
   // A run_loop with an empty environment. This is a struct instead of a type alias to give
   // it a simpler type name that is easier to read in diagnostics.
+  STDEXEC_MODULE_EXPORT
   struct run_loop : __run_loop::__basic_run_loop<run_loop, env<>>
   {
     run_loop() = default;
@@ -406,4 +430,5 @@ namespace STDEXEC
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

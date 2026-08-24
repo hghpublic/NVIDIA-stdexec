@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "test_common/receivers.hpp"
 #include <catch2/catch_all.hpp>
+
 #include <stdexec/execution.hpp>
 
-#include <climits>
-#include <string>
+#include "test_common/receivers.hpp"
+
+#if STDEXEC_USE_MODULES()
+import std;
+#else
+#  include <climits>
+#endif
 
 namespace ex = STDEXEC;
 

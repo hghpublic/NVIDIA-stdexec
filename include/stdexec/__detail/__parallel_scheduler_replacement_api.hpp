@@ -16,27 +16,40 @@
 
 #pragma once
 
-#include "__execution_fwd.hpp"
-#include "__parallel_scheduler_backend.hpp"
+#include "__config.hpp"
 
-#include <memory>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
+#  include "__parallel_scheduler_backend.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <memory>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC::parallel_scheduler_replacement
 {
   /// Get the backend for the parallel scheduler.
   /// Users might replace this function.
+  STDEXEC_MODULE_EXPORT
   STDEXEC_ATTRIBUTE(weak)
   auto query_parallel_scheduler_backend() -> std::shared_ptr<parallel_scheduler_backend>;
 
   /// The type of a factory that can create `parallel_scheduler_backend` instances.
   /// NOT TO SPEC
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __parallel_scheduler_backend_factory_t = std::shared_ptr<parallel_scheduler_backend> (*)();
 
   /// Set a factory for the parallel scheduler backend.
   /// Can be used to replace the parallel scheduler at runtime.
   /// NOT TO SPEC
+  STDEXEC_MODULE_EXPORT
   [[deprecated("Replacing the parallel scheduler backend at runtime is not recommended and may "
                "lead to unexpected behavior. Use weak linking to replace the parallel scheduler at "
                "compile time instead.")]]
@@ -44,4 +57,5 @@ namespace STDEXEC::parallel_scheduler_replacement
     -> __parallel_scheduler_backend_factory_t;
 }  // namespace STDEXEC::parallel_scheduler_replacement
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

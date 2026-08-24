@@ -13,19 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <exception>
-
 #include <catch2/catch_all.hpp>
+
+#include <stdexec/execution.hpp>
+
 #include <exec/sender_for.hpp>
 #include <exec/static_thread_pool.hpp>
-#include <stdexec/execution.hpp>
 #include <test_common/receivers.hpp>
 #include <test_common/schedulers.hpp>
 #include <test_common/senders.hpp>
 #include <test_common/type_helpers.hpp>
 
-#include <numeric>
-#include <vector>
+#if STDEXEC_USE_MODULES()
+import std;
+#else
+#  include <exception>
+#  include <numeric>
+#  include <vector>
+#endif
 
 namespace ex = STDEXEC;
 
@@ -694,6 +699,26 @@ namespace
     auto snd = ex::just_stopped() | ex::bulk_chunked(ex::par, n, [&called](int, int) { called++; });
     auto op  = ex::connect(std::move(snd), expect_stopped_receiver{});
     ex::start(op);
+  }
+
+  TEST_CASE("bulk_chunked function is not called with a zero shape", "[adaptors][bulk]")
+  {
+    int called{};
+
+    auto snd = ex::just() | ex::bulk_chunked(ex::seq, 0, [&called](int, int) { called++; });
+    ex::sync_wait(std::move(snd));
+
+    CHECK(called == 0);
+  }
+
+  TEST_CASE("bulk_chunked function is not called with a negative shape", "[adaptors][bulk]")
+  {
+    int called{};
+
+    auto snd = ex::just() | ex::bulk_chunked(ex::seq, -1, [&called](int, int) { called++; });
+    ex::sync_wait(std::move(snd));
+
+    CHECK(called == 0);
   }
 
   TEST_CASE("bulk_unchunked function in not called on stop", "[adaptors][bulk]")

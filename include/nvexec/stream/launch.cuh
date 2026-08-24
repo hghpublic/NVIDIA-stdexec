@@ -119,7 +119,7 @@ namespace nv::execution
       template <class Fun, class CvSender, class... Env>
       using completions_t =
         __transform_completion_signatures_t<__completion_signatures_of_t<CvSender, Env...>,
-                                            completion_signatures<set_error_t(std::exception_ptr)>,
+                                            completion_signatures<set_error_t(cudaError_t)>,
                                             __mbind_front_q<_set_value_t, Fun>::template __f>;
     }  // namespace _launch
 
@@ -141,7 +141,11 @@ namespace nv::execution
           static_cast<Self&&>(self).sndr_,
           static_cast<Receiver&&>(rcvr),
           [&](_strm::opstate_base<Receiver>& stream_provider) -> receiver_t<Receiver>
-          { return receiver_t<Receiver>(stream_provider, self.fun_, self.params_); });
+          {
+            return receiver_t<Receiver>(stream_provider,
+                                        static_cast<Self&&>(self).fun_,
+                                        self.params_);
+          });
       }
       STDEXEC_EXPLICIT_THIS_END(connect)
 

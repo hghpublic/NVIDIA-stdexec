@@ -17,17 +17,26 @@
 
 #include "__config.hpp"
 
-#include <cassert>
-#include <cstddef>
-#include <iterator>
-#include <utility>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cassert>
+#    include <cstddef>
+#    include <iterator>
+#    include <utility>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
   namespace __slist
   {
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <auto _Next>
     class __intrusive_slist;
 
@@ -170,8 +179,10 @@ namespace STDEXEC
     };
   }  // namespace __slist
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __slist::__intrusive_slist;
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

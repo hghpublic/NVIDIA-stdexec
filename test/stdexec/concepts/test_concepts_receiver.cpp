@@ -13,9 +13,10 @@
 //  * See the License for the specific language governing permissions and
 //  * limitations under the License.
 //  */
-
 #include <catch2/catch_all.hpp>
+
 #include <stdexec/execution.hpp>
+
 #include <test_common/receivers.hpp>
 
 namespace ex = STDEXEC;
@@ -73,7 +74,7 @@ struct recv_set_error_except
   void set_stopped() noexcept {}
   void set_error(std::exception_ptr)
   {
-    throw std::logic_error{"err"};
+    STDEXEC_THROW(std::logic_error{"err"});
   }
 
   [[nodiscard]]
@@ -90,7 +91,7 @@ struct recv_set_stopped_except
   void set_value() noexcept {}
   void set_stopped()
   {
-    throw std::logic_error{"err"};
+    STDEXEC_THROW(std::logic_error{"err"});
   }
   void set_error(std::exception_ptr) noexcept {}
 

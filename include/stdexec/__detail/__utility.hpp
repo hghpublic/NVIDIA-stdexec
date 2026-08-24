@@ -15,18 +15,27 @@
  */
 #pragma once
 
-#include "__concepts.hpp"
 #include "__config.hpp"
-#include "__meta.hpp"
 
-#include <cstdarg>
-#include <cstdio>
-#include <initializer_list>
-#include <memory>   // IWYU pragma: keep for std::start_lifetime_as
-#include <new>      // IWYU pragma: keep for std::launder
-#include <utility>  // IWYU pragma: keep for std::unreachable
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__concepts.hpp"
+#  include "__meta.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cstdarg>
+#    include <cstdio>
+#    include <initializer_list>
+#    include <memory>   // IWYU pragma: keep for std::start_lifetime_as
+#    include <new>      // IWYU pragma: keep for std::launder
+#    include <utility>  // IWYU pragma: keep for std::unreachable
+#  endif
+
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_GNU("-Wduplicate-decl-specifier")
 
@@ -34,19 +43,24 @@ namespace STDEXEC
 {
   inline constexpr std::size_t __npos = ~0UL;
 
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   struct __undefined;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __empty = struct __
   {};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __none_such
   {};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr struct __no_init_t
   {
   } __no_init{};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr struct __in_place_from_t
   {
     explicit __in_place_from_t() = default;
@@ -58,12 +72,14 @@ namespace STDEXEC
     {};
   }  // namespace
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __immovable
   {
     __immovable() = default;
     STDEXEC_IMMOVABLE(__immovable);
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   struct __move_only
   {
     __move_only()                                          = default;
@@ -73,6 +89,7 @@ namespace STDEXEC
     auto operator=(__move_only const &) -> __move_only&    = delete;
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fun, class... _As>
   using __call_result_t = decltype(__declval<_Fun>()(__declval<_As>()...));
 
@@ -80,15 +97,18 @@ namespace STDEXEC
   using __call_result_or_t = __minvoke_or_q<__call_result_t, _Default, _Fun, _As...>;
 
 // BUGBUG TODO file this bug with nvc++
-#if STDEXEC_EDG()
-  template <const auto& _Fun, class... _As>
+#  if STDEXEC_EDG()
+  STDEXEC_MODULE_EXPORT_META
+  template <auto const & _Fun, class... _As>
   using __result_of = __call_result_t<decltype(_Fun), _As...>;
-#else
-  template <const auto& _Fun, class... _As>
+#  else
+  STDEXEC_MODULE_EXPORT_META
+  template <auto const & _Fun, class... _As>
   using __result_of = decltype(_Fun(__declval<_As>()...));
-#endif
+#  endif
 
-  template <const auto& _Fun, class... _As>
+  STDEXEC_MODULE_EXPORT_AUTHORING
+  template <auto const & _Fun, class... _As>
   inline constexpr bool __noexcept_of = noexcept(_Fun(__declval<_As>()...));
 
   // For emplacing non-movable types into optionals:
@@ -126,6 +146,7 @@ namespace STDEXEC
   struct __priority<0>
   {};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr auto __umin(std::initializer_list<std::size_t> __il) noexcept -> std::size_t
   {
     std::size_t __m = ~0UL;
@@ -139,6 +160,7 @@ namespace STDEXEC
     return __m;
   }
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr auto __umax(std::initializer_list<std::size_t> __il) noexcept -> std::size_t
   {
     std::size_t __m = 0;
@@ -172,6 +194,7 @@ namespace STDEXEC
     return __pos_of(__same, __same + sizeof...(_Ts));
   }
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _Uy>
   STDEXEC_ATTRIBUTE(nodiscard, always_inline)
   constexpr auto __forward_like(_Uy&& __uy) noexcept -> auto&&
@@ -249,14 +272,15 @@ namespace STDEXEC
 
   inline constexpr auto __decay_copy = __decay_copy_t{};
 
-#if defined(__cpp_auto_cast) && (__cpp_auto_cast >= 202110L)
-#  define STDEXEC_DECAY_COPY(...) auto(__VA_ARGS__)
-#else
-#  define STDEXEC_DECAY_COPY(...) (true ? (__VA_ARGS__) : STDEXEC::__decay_copy(__VA_ARGS__))
-#endif
+#  if defined(__cpp_auto_cast) && (__cpp_auto_cast >= 202110L)
+#    define STDEXEC_DECAY_COPY(...) auto(__VA_ARGS__)
+#  else
+#    define STDEXEC_DECAY_COPY(...) (true ? (__VA_ARGS__) : STDEXEC::__decay_copy(__VA_ARGS__))
+#  endif
 
   //////////////////////////////////////////////////////////////////////////////////////////
   // __unconst
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class T>
   STDEXEC_ATTRIBUTE(nodiscard, always_inline)
   constexpr auto __unconst(T const & t) noexcept -> T&
@@ -287,12 +311,12 @@ namespace STDEXEC
     static_assert(std::derived_from<__value_type, _CvInterface>,
                   "__polymorphic_downcast requires From to be a base class of To");
 
-#if !STDEXEC_NO_STDCPP_RTTI()
+#  if !STDEXEC_NO_STDCPP_RTTI()
     STDEXEC_IF_NOT_CONSTEVAL
     {
       STDEXEC_ASSERT(dynamic_cast<__value_type*>(__from_ptr) != nullptr);
     }
-#endif
+#  endif
     return static_cast<__value_type*>(__from_ptr);
   }
 
@@ -310,9 +334,9 @@ namespace STDEXEC
   {
 //////////////////////////////////////////////////////////////////////////////////////////
 // start_lifetime_as
-#if defined(__cpp_lib_start_lifetime_as) && __cpp_lib_start_lifetime_as >= 202207L
+#  if defined(__cpp_lib_start_lifetime_as) && __cpp_lib_start_lifetime_as >= 202207L
     using std::start_lifetime_as;
-#else
+#  else
     template <class _Ty>
     STDEXEC_ATTRIBUTE(nodiscard, always_inline)
     _Ty* start_lifetime_as(void* __ptr) noexcept
@@ -326,19 +350,21 @@ namespace STDEXEC
     {
       return std::launder(static_cast<_Ty const *>(__ptr));
     }
-#endif
+#  endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // unreachable
-#if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
+#  if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
+    STDEXEC_MODULE_EXPORT_AUTHORING
     using std::unreachable;
-#else
+#  else
+    STDEXEC_MODULE_EXPORT_AUTHORING
     [[noreturn]]
     inline void unreachable()
     {
       STDEXEC_UNREACHABLE();
     }
-#endif
+#  endif
   }  // namespace __std
 
   inline void __debug_vprintf(char const * __fmt, va_list __args) noexcept
@@ -381,4 +407,5 @@ namespace STDEXEC
   }
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

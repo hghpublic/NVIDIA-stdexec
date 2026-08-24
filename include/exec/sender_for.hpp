@@ -15,8 +15,14 @@
  */
 #pragma once
 
-#include "../stdexec/__detail/__sender_introspection.hpp"
+#include "../stdexec/__detail/__config.hpp"
 
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+import stdexec;
+#else
+#  include "../stdexec/__detail/__sender_introspection.hpp"
+
+STDEXEC_MODULE_EXPORT
 namespace experimental::execution
 {
   template <class _Sender, class... _Tag>
@@ -24,3 +30,4 @@ namespace experimental::execution
 }  // namespace experimental::execution
 
 namespace exec = experimental::execution;
+#endif

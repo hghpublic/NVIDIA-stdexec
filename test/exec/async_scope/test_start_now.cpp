@@ -1,7 +1,7 @@
-#include <catch2/catch_all.hpp>
 #include <exec/async_scope.hpp>
 #include <exec/start_now.hpp>
 #include <exec/static_thread_pool.hpp>
+#include <test_common/catch2.hpp>
 
 #include "test_common/receivers.hpp"
 #include "test_common/schedulers.hpp"
@@ -24,6 +24,14 @@ namespace
     auto stg = start_now(scope, ex::just() | ex::then([&]() noexcept { executed = true; }));
     sync_wait(stg.async_wait());
     REQUIRE(executed);
+  }
+
+  TEST_CASE("start_now zero", "[async_scope][start_now]")
+  {
+    async_scope scope;
+    auto        stg = start_now(scope);
+
+    REQUIRE(sync_wait(stg.async_wait()).has_value());
   }
 
   TEST_CASE("start_now two", "[async_scope][start_now]")

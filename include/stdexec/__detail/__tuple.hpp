@@ -15,28 +15,37 @@
  */
 #pragma once
 
-#include "__concepts.hpp"
 #include "__config.hpp"
-#include "__meta.hpp"
-#include "__type_traits.hpp"
-#include "__utility.hpp"
 
-#include <cstddef>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#if STDEXEC_GCC() || STDEXEC_NVHPC()
+import stdexec;
+
+#else
+
+#  include "__concepts.hpp"
+#  include "__meta.hpp"
+#  include "__type_traits.hpp"
+#  include "__utility.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <cstddef>
+#  endif
+
+#  if STDEXEC_GCC() || STDEXEC_NVHPC()
 // GCC (as of v14) does not implement the resolution of CWG1835
 // https://cplusplus.github.io/CWG/issues/1835.html
 // See: https://godbolt.org/z/TzxrhK6ea
-#  define STDEXEC_NO_CWG1835
-#endif
+#    define STDEXEC_NO_CWG1835
+#  endif
 
-#ifdef STDEXEC_NO_CWG1835
-#  define STDEXEC_CWG1835_TEMPLATE
-#else
-#  define STDEXEC_CWG1835_TEMPLATE template
-#endif
+#  ifdef STDEXEC_NO_CWG1835
+#    define STDEXEC_CWG1835_TEMPLATE
+#  else
+#    define STDEXEC_CWG1835_TEMPLATE template
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_GNU("-Wmissing-braces")
 
@@ -44,6 +53,7 @@ namespace STDEXEC
 {
   namespace __tup
   {
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class... _Ts>
     struct STDEXEC_ATTRIBUTE(empty_bases) __tuple;
 
@@ -223,7 +233,7 @@ namespace STDEXEC
     template <class... _Ts>
     STDEXEC_HOST_DEVICE_DEDUCTION_GUIDE __tuple(_Ts...) -> __tuple<_Ts...>;
 
-#define STDEXEC_TUPLE_GET(_Idx) , static_cast<_Tuple&&>(__tupl).__val##_Idx
+#  define STDEXEC_TUPLE_GET(_Idx) , static_cast<_Tuple&&>(__tupl).__val##_Idx
 
     //
     // __apply(fn, tuple, extra...)
@@ -308,19 +318,23 @@ namespace STDEXEC
       }
     };
 
-#undef STDEXEC_TUPLE_GET
+#  undef STDEXEC_TUPLE_GET
   }  // namespace __tup
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   using __tup::__tuple;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr __tup::__apply_t __apply{};
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fn, class _Tuple, class... _Us>
   using __apply_result_t = __call_result_t<__tup::__apply_t, _Fn, _Tuple, _Us...>;
 
   template <class _Fn, class _Tuple, class... _Us>
   concept __applicable = __callable<__tup::__apply_t::__impl_t<_Tuple>, _Fn, _Tuple, _Us...>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fn, class _Tuple, class... _Us>
   concept __nothrow_applicable =
     __nothrow_callable<__tup::__apply_t::__impl_t<_Tuple>, _Fn, _Tuple, _Us...>;
@@ -352,6 +366,7 @@ namespace STDEXEC
     }
   }  // namespace __tup
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <size_t _Index, class _Tuple>
   STDEXEC_ATTRIBUTE(nodiscard, always_inline, host, device)
   constexpr auto __get(_Tuple&& __tupl) noexcept -> auto&&
@@ -406,6 +421,7 @@ namespace STDEXEC
   //
   // __decayed_tuple<Ts...>
   //
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _Ts>
   using __decayed_tuple = __tuple<__decay_t<_Ts>...>;
 
@@ -546,4 +562,5 @@ namespace STDEXEC
 
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

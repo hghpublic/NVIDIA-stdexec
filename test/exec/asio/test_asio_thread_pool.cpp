@@ -17,9 +17,6 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <numeric>
-#include <span>
-
 #include <stdexec/execution.hpp>
 
 #include <exec/inline_scheduler.hpp>
@@ -28,6 +25,13 @@
 #include <exec/asio/asio_thread_pool.hpp>
 
 #include <exec/asio/use_sender.hpp>
+
+#if STDEXEC_USE_MODULES()
+import std;
+#else
+#  include <numeric>
+#  include <span>
+#endif
 
 namespace ex = STDEXEC;
 

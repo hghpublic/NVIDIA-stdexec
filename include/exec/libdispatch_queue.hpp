@@ -18,18 +18,27 @@
 
 #if __has_include(<dispatch/dispatch.h>)
 
+#  include <stdexec/execution.hpp>
+
+#  if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+import stdexec;
+#  else
 // TODO: This is needed for libdispatch to compile with GCC. Need to look for
 // workaround.
-#  ifndef __has_feature
-#    define __has_feature(x) false
-#  endif
-#  ifndef __has_extension
-#    define __has_extension(x) false
-#  endif
+#    ifndef __has_feature
+#      define __has_feature(x) false
+#    endif
+#    ifndef __has_extension
+#      define __has_extension(x) false
+#    endif
 
-#  include "../stdexec/execution.hpp"
-#  include "sender_for.hpp"
-#  include <dispatch/dispatch.h>
+#    include "completion_signatures.hpp"
+#    include "sender_for.hpp"
+
+#    if !STDEXEC_USE_MODULES()
+#      include <dispatch/dispatch.h>
+#      include <vector>
+#    endif
 
 namespace experimental::execution
 {
@@ -253,30 +262,11 @@ namespace experimental::execution
     {
       using sender_concept = STDEXEC::sender_tag;
 
-      template <class CvSender, class... Env>
-      using with_error_invoke_t = STDEXEC::__if_c<
-        STDEXEC::__value_types_t<STDEXEC::__completion_signatures_of_t<CvSender, Env...>,
-                                 STDEXEC::__mbind_front_q<bulk_non_throwing_t, Fun, Shape>,
-                                 STDEXEC::__q<STDEXEC::__mand>>::value,
-        STDEXEC::completion_signatures<>,
-        STDEXEC::__eptr_completion_t>;
-
-      template <class... Tys>
-      using set_value_t =
-        STDEXEC::completion_signatures<STDEXEC::set_value_t(STDEXEC::__decay_t<Tys>...)>;
-
-      template <class Self, class... Env>
-      using _completions_t = STDEXEC::__transform_completion_signatures_t<
-        STDEXEC::__completion_signatures_of_t<STDEXEC::__copy_cvref_t<Self, Sender>, Env...>,
-        with_error_invoke_t<STDEXEC::__copy_cvref_t<Self, Sender>, Env...>,
-        set_value_t>;
-
       template <class Self, class Receiver>
       using bulk_op_state_t =
         bulk_op_state<STDEXEC::__copy_cvref_t<Self, Sender>, Receiver, Shape, Fun>;
 
       template <STDEXEC::__decays_to<bulk_sender> Self, STDEXEC::receiver Receiver>
-        requires STDEXEC::receiver_of<Receiver, _completions_t<Self, STDEXEC::env_of_t<Receiver>>>
       STDEXEC_EXPLICIT_THIS_BEGIN(auto connect)(this Self &&self, Receiver rcvr)
         noexcept(STDEXEC::__nothrow_constructible_from<bulk_op_state_t<Self, Receiver>,
                                                        libdispatch_queue &,
@@ -294,11 +284,48 @@ namespace experimental::execution
       STDEXEC_EXPLICIT_THIS_END(connect)
 
       template <STDEXEC::__decays_to<bulk_sender> Self, class... Env>
-      static consteval auto get_completion_signatures() -> _completions_t<Self, Env...>
+      static consteval auto get_completion_signatures()
       {
-        return {};
+        using namespace STDEXEC;
+        return exec::transform_completion_signatures(
+          STDEXEC::get_completion_signatures<__copy_cvref_t<Self, Sender>, Env...>(),
+          []<class... Args>()
+          {
+            using value_sig_t = set_value_t(__decay_t<Args>...);
+            using arg_pack_t  = __tuple<Shape, __decay_t<Args> &...>;
+            // using arg_pack_t  = __if_c<__same_as<_AlgoTag, bulk_chunked_t>,
+            //                             __tuple<Shape, Shape, Args&...>,
+            //                             __tuple<Shape, Args&...>>;
+            if constexpr (!__decay_copyable<Args...>)
+            {
+              return exec::throw_compile_time_error<
+                _WHAT_(_PREDECESSOR_RESULTS_ARE_NOT_DECAY_COPYABLE_),
+                _WHERE_(_IN_ALGORITHM_, bulk_t),
+                _WITH_ARGUMENTS_(Args...),
+                _WITH_PRETTY_SENDER_<__copy_cvref_t<Self, Sender>>,
+                _WITH_ENVIRONMENT_(Env...)>();
+            }
+            else if constexpr (__nothrow_applicable<Fun &, arg_pack_t>
+                               && __nothrow_decay_copyable<Args...>)
+            {
+              return completion_signatures<value_sig_t>();
+            }
+            else if constexpr (__applicable<Fun &, arg_pack_t>)
+            {
+              return completion_signatures<value_sig_t, set_error_t(std::exception_ptr)>();
+            }
+            else
+            {
+              return STDEXEC::__throw_compile_time_error<
+                _WHAT_(_FUNCTION_IS_NOT_CALLABLE_WITH_THE_GIVEN_ARGUMENTS_),
+                _WHERE_(_IN_ALGORITHM_, bulk_t),
+                _WITH_FUNCTION_(Fun &),
+                __mapply<__qf<_WITH_ARGUMENTS_>, arg_pack_t>>();
+            }
+          });
       }
 
+      [[nodiscard]]
       auto get_env() const noexcept -> STDEXEC::env_of_t<Sender const &>
       {
         return STDEXEC::get_env(sndr_);
@@ -450,16 +477,17 @@ namespace experimental::execution
         {
           STDEXEC_TRY
           {
-            shared_state_.data_.template emplace<tuple_t>(std::move(as)...);
+            shared_state_.data_.template emplace<tuple_t>(static_cast<As &&>(as)...);
           }
           STDEXEC_CATCH_ALL
           {
             STDEXEC::set_error(std::move(shared_state_.rcvr_), std::current_exception());
+            return;
           }
         }
         else
         {
-          shared_state_.data_.template emplace<tuple_t>(std::move(as)...);
+          shared_state_.data_.template emplace<tuple_t>(static_cast<As &&>(as)...);
         }
 
         if (shared_state_.shape_)
@@ -509,7 +537,8 @@ namespace experimental::execution
 
       bulk_op_state(libdispatch_queue &queue, Shape shape, Fun fun, CvSender &&sndr, Receiver rcvr)
         : shared_state_(std::move(rcvr), shape, fun)
-        , inner_op_{STDEXEC::connect(std::move(sndr), bulk_rcvr{shared_state_, queue})}
+        , inner_op_{
+            STDEXEC::connect(static_cast<CvSender &&>(sndr), bulk_rcvr{shared_state_, queue})}
       {}
 
       void start() & noexcept
@@ -525,4 +554,5 @@ namespace experimental::execution
 
 namespace exec = experimental::execution;
 
-#endif  // __has_include(<dispatch/dispatch.h>)
+#  endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)
+#endif    // __has_include(<dispatch/dispatch.h>)

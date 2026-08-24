@@ -20,33 +20,45 @@
 #endif
 
 #include "__config.hpp"
-#include "__type_traits.hpp"
 
-#include <utility>  // IWYU pragma: keep for std::swap
-#include <version>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#if !STDEXEC_NO_STDCPP_CONCEPTS_HEADER()
-#  include <concepts>
+import stdexec;
+
 #else
-#  include <type_traits>
-#endif
 
-#include "__prologue.hpp"
+#  include "__type_traits.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <utility>  // IWYU pragma: keep for std::swap
+#    include <version>
+
+#    if !STDEXEC_NO_STDCPP_CONCEPTS_HEADER()
+#      include <concepts>
+#    else
+#      include <type_traits>
+#    endif
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
   //////////////////////////////////////////////////////////////////////////////////////////////////
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fun, class... _As>
   concept __callable = requires(_Fun &&__fun, _As &&...__as) {
     static_cast<_Fun &&>(__fun)(static_cast<_As &&>(__as)...);
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fun, class... _As>
   concept __nothrow_callable = __callable<_Fun, _As...> && requires(_Fun &&__fun, _As &&...__as) {
     { static_cast<_Fun &&>(__fun)(static_cast<_As &&>(__as)...) } noexcept;
   };
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
+  STDEXEC_MODULE_EXPORT_META
   template <class...>
   struct __mlist;
 
@@ -56,16 +68,20 @@ namespace STDEXEC
   };
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ap, class _Bp>
   concept __same_as = STDEXEC_IS_SAME(_Ap, _Bp);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ap, class _Bp>
   concept __not_same_as = !STDEXEC_IS_SAME(_Ap, _Bp);
 
   // Handy concepts
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _Up>
   concept __decays_to = __same_as<__decay_t<_Ty>, _Up>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _Up>
   concept __not_decays_to = !__decays_to<_Ty, _Up>;
 
@@ -78,12 +94,14 @@ namespace STDEXEC
   template <class _Cp>
   concept __class = __true<int _Cp::*> && (!__same_as<_Cp const, _Cp>);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class... _As>
   concept __one_of = (__same_as<_Ty, _As> || ...);
 
   template <class _Ty, class... _Us>
   concept __all_of = (__same_as<_Ty, _Us> && ...);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class... _Us>
   concept __none_of = (__not_same_as<_Ty, _Us> && ...);
 
@@ -93,6 +111,7 @@ namespace STDEXEC
   template <class... _As, template <class...> class _Ty>
   constexpr bool __is_instance_of_<_Ty<_As...>, _Ty> = true;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ay, template <class...> class _Ty>
   concept __is_instance_of = __is_instance_of_<_Ay, _Ty>;
 
@@ -120,25 +139,30 @@ namespace STDEXEC
 
     // Make sure we're using a same_as concept that doesn't instantiate a class template
     // (i.e., std::is_same)
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Ap, class _Bp>
     concept same_as = __same_as<_Ap, _Bp> && __same_as<_Bp, _Ap>;
 
-#if !STDEXEC_NO_STDCPP_CONCEPTS_HEADER()
+#  if !STDEXEC_NO_STDCPP_CONCEPTS_HEADER()
 
     using std::integral;
+    STDEXEC_MODULE_EXPORT_AUTHORING
     using std::derived_from;
+    STDEXEC_MODULE_EXPORT_AUTHORING
     using std::convertible_to;
     using std::equality_comparable;
 
-#else
+#  else
 
     template <class T>
     concept integral = std::is_integral_v<T>;
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Ap, class _Bp>
     concept derived_from = STDEXEC_IS_BASE_OF(_Bp, _Ap)
                         && STDEXEC_IS_CONVERTIBLE_TO(_Ap const volatile *, _Bp const volatile *);
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _From, class _To>
     concept convertible_to = STDEXEC_IS_CONVERTIBLE_TO(_From, _To)
                           && requires(__declfn_t<_From> __fun) { static_cast<_To>(__fun()); };
@@ -148,7 +172,7 @@ namespace STDEXEC
       { __t == __t } -> convertible_to<bool>;
       { __t != __t } -> convertible_to<bool>;
     };
-#endif
+#  endif
   }  // namespace __std
 
   // Not exactly right, but close.
@@ -178,17 +202,18 @@ namespace STDEXEC
     // Avoid using libstdc++'s object concepts because they instantiate a
     // LOT of templates.
 
-#if STDEXEC_HAS_BUILTIN(__is_nothrow_destructible) || STDEXEC_MSVC()
+#  if STDEXEC_HAS_BUILTIN(__is_nothrow_destructible) || STDEXEC_MSVC()
     template <class _Ty>
     concept destructible = __is_nothrow_destructible(_Ty);
-#else   // ^^^ has __is_nothrow_destructible / no __is_nothrow_destructible vvv
+#  else   // ^^^ has __is_nothrow_destructible / no __is_nothrow_destructible vvv
     template <class T>
     concept destructible = __detail::__destructible_<T>;
-#endif  // ^^^ no __is_nothrow_destructible
+#  endif  // ^^^ no __is_nothrow_destructible
 
     template <class _Ty, class... _As>
     concept constructible_from = destructible<_Ty> && STDEXEC_IS_CONSTRUCTIBLE(_Ty, _As...);
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Ty>
     concept default_initializable = constructible_from<_Ty> && requires { _Ty{}; }
                                  && requires { ::new _Ty; };
@@ -280,6 +305,7 @@ namespace STDEXEC
     { _Ty{__as()...} } noexcept;
   };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty>
   concept __movable_value = __std::move_constructible<__decay_t<_Ty>>
                          && __std::constructible_from<__decay_t<_Ty>, _Ty>;
@@ -290,19 +316,23 @@ namespace STDEXEC
                                       { __decay_t<_Ty>(__decay_t<_Ty>(__t())) } noexcept;
                                     };
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class... _As>
   concept __nothrow_constructible_from = __std::constructible_from<_Ty, _As...>
                                       && STDEXEC_IS_NOTHROW_CONSTRUCTIBLE(_Ty, _As...);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _Ts>
   concept __nothrow_move_constructible = (__nothrow_constructible_from<_Ts, _Ts> && ...);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _Ts>
   concept __nothrow_copy_constructible = (__nothrow_constructible_from<_Ts, _Ts const &> && ...);
 
   template <class _Ty, class _A>
   concept __assignable_from = STDEXEC_IS_ASSIGNABLE(_Ty, _A);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _A>
   concept __nothrow_assignable_from = STDEXEC_IS_NOTHROW_ASSIGNABLE(_Ty, _A);
 
@@ -318,22 +348,26 @@ namespace STDEXEC
   template <class... _Ts>
   concept __nothrow_copy_assignable = (__nothrow_assignable_from<_Ts, _Ts const &> && ...);
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _Ts>
   concept __decay_copyable = (__std::constructible_from<__decay_t<_Ts>, _Ts> && ...);
 
   template <class... _Ts>
   using __decay_copyable_t = __mbool<__decay_copyable<_Ts...>>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class... _Ts>
   concept __nothrow_decay_copyable = (__nothrow_constructible_from<__decay_t<_Ts>, _Ts> && ...);
 
   template <class... _Ts>
   using __nothrow_decay_copyable_t = __mbool<__nothrow_decay_copyable<_Ts...>>;
 
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Ty, class _Up>
   concept __decays_to_derived_from = __std::derived_from<__decay_t<_Ty>, _Up>;
 
   // See [allocator.requirements.general]/p99 (https://eel.is/c++draft/allocator.requirements.general#99)
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Alloc>
   concept __simple_allocator =  //
     requires(_Alloc __alloc, std::size_t __count) {
@@ -344,4 +378,5 @@ namespace STDEXEC
     && __std::equality_comparable<_Alloc>;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

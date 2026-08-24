@@ -15,14 +15,45 @@
  */
 
 #include "exec/just_from.hpp"
+#include "test_common/receivers.hpp"
 #include "test_common/tuple.hpp"
 #include "test_common/type_helpers.hpp"
 
-#include <catch2/catch_all.hpp>
+#include <test_common/catch2.hpp>
 
 namespace
 {
   constinit int global_int = 0;
+
+  struct throwing_move_callable
+  {
+    explicit throwing_move_callable(bool& should_throw) noexcept
+      : should_throw_(&should_throw)
+    {}
+
+    throwing_move_callable(throwing_move_callable const & other) noexcept
+      : should_throw_(other.should_throw_)
+    {}
+
+    throwing_move_callable(throwing_move_callable&& other) noexcept(false)
+      : should_throw_(other.should_throw_)
+    {
+#if !STDEXEC_NO_STDCPP_EXCEPTIONS()
+      if (*should_throw_)
+      {
+        throw 42;
+      }
+#endif
+    }
+
+    template <class Sink>
+    auto operator()(Sink sink) noexcept
+    {
+      return sink();
+    }
+
+    bool* should_throw_;
+  };
 
   TEST_CASE("just_from is a sender", "[just_from]")
   {
@@ -60,6 +91,38 @@ namespace
     CHECK(a == 42);
     CHECK(b == 43);
     CHECK(c == 44);
+  }
+
+  TEST_CASE("just_from is conditionally noexcept when storing the callable", "[just_from]")
+  {
+    auto nothrow_fn = [](auto sink) noexcept
+    {
+      return sink();
+    };
+    STATIC_REQUIRE(noexcept(exec::just_from(nothrow_fn)));
+
+    bool                   should_throw = false;
+    throwing_move_callable fn{should_throw};
+    STATIC_REQUIRE_FALSE(noexcept(exec::just_from(fn)));
+
+#if !STDEXEC_NO_STDCPP_EXCEPTIONS()
+    should_throw = true;
+    CHECK_THROWS_AS(exec::just_from(fn), int);
+#endif
+  }
+
+  TEST_CASE("just_from submit is conditionally noexcept", "[just_from]")
+  {
+    bool should_throw = false;
+    auto s            = exec::just_from(throwing_move_callable{should_throw});
+
+    STATIC_REQUIRE_FALSE(noexcept(static_cast<decltype(s)&&>(s).submit(empty_recv::recv0{})));
+    STATIC_REQUIRE(noexcept(s.submit(empty_recv::recv0{})));
+
+#if !STDEXEC_NO_STDCPP_EXCEPTIONS()
+    should_throw = true;
+    CHECK_THROWS_AS(static_cast<decltype(s)&&>(s).submit(empty_recv::recv0{}), int);
+#endif
   }
 
   TEST_CASE("just_from with multiple completions", "[just_from]")

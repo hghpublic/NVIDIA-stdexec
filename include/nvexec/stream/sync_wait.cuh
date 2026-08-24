@@ -35,8 +35,7 @@ namespace nv::execution::_strm
   {
     struct env
     {
-      template <
-        __one_of<get_start_scheduler_t, get_start_scheduler_t, get_delegation_scheduler_t> _Query>
+      template <__one_of<get_scheduler_t, get_start_scheduler_t, get_delegation_scheduler_t> _Query>
       [[nodiscard]]
       constexpr auto query(_Query) const noexcept -> run_loop::scheduler
       {
@@ -181,7 +180,7 @@ namespace nv::execution::_strm
     struct sync_wait_t
     {
       template <sender_in<env> Sender>
-        requires __single_value_variant_sender<Sender, env>
+        requires(__count_of<set_value_t, Sender, env>::value == 1)
       auto operator()(context ctx, Sender&& sndr) const  //
         -> std::optional<sync_wait_result_t<Sender>>
       {

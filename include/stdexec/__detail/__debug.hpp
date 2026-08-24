@@ -15,18 +15,28 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__completion_signatures.hpp"
-#include "__concepts.hpp"
-#include "__env.hpp"  // IWYU pragma: keep for env<>
-#include "__meta.hpp"
-#include "__query.hpp"
-#include "__sender_concepts.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include <exception>  // IWYU pragma: keep for std::terminate
+import stdexec;
 
-#include "__prologue.hpp"
+#else
+
+#  include "__execution_fwd.hpp"
+
+#  include "__completion_signatures.hpp"
+#  include "__concepts.hpp"
+#  include "__env.hpp"  // IWYU pragma: keep for env<>
+#  include "__meta.hpp"
+#  include "__query.hpp"
+#  include "__sender_concepts.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>  // IWYU pragma: keep for std::terminate
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -57,6 +67,7 @@ namespace STDEXEC
     struct _SIGNAL_SENT_BY_SENDER_
     {};
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Warning>
     [[deprecated("The sender claims to send a particular set of completions,"
                  " but in actual fact it completes with a result that is not"
@@ -65,9 +76,11 @@ namespace STDEXEC
       void _ATTENTION_() noexcept
     {}
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _Env>
     using __env_t = env<prop<__debug_env_t, bool>, _Env>;
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     template <class _CvSender, class _Env, class... _Sigs>
     struct __receiver
     {
@@ -121,6 +134,7 @@ namespace STDEXEC
                    __mbind_front_q<__receiver, _CvSender, _Env>>,
       _Sigs>;
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     struct __opstate
     {
       constexpr void start() & noexcept {}
@@ -215,4 +229,5 @@ namespace STDEXEC
   }
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

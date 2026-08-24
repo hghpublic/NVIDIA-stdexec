@@ -15,14 +15,22 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
+
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "__connect.hpp"
-#include "__env.hpp"
-#include "__get_completion_signatures.hpp"
+#  include "__connect.hpp"
+#  include "__env.hpp"
+#  include "__get_completion_signatures.hpp"
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -37,8 +45,7 @@ namespace STDEXEC
     using __sender_t = __copy_cvref_t<_Self, std::remove_cv_t<_Sender>>;
 
     template <class _Self, class... _Env>
-    static consteval auto get_completion_signatures()  //
-      -> __completion_signatures_of_t<__sender_t<_Self>, _Env...>
+    static consteval auto get_completion_signatures()
     {
       return STDEXEC::get_completion_signatures<__sender_t<_Self>, _Env...>();
     }
@@ -89,4 +96,5 @@ namespace STDEXEC
   STDEXEC_HOST_DEVICE_DEDUCTION_GUIDE __sender_ref(_Sender&) -> __sender_ref<_Sender>;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

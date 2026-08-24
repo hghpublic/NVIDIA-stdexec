@@ -15,38 +15,50 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "__config.hpp"
 
-#include "__execution_fwd.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
+
+import stdexec;
+
+#else
+
+#  pragma once
+
+#  include "__execution_fwd.hpp"
 
 // include these after __execution_fwd.hpp
-#include "../functional.hpp"  // IWYU pragma: keep for __with_default
-#include "../stop_token.hpp"  // IWYU pragma: keep for get_stop_token_t
-#include "__any.hpp"
-#include "__any_allocator.hpp"
-#include "__inline_scheduler.hpp"
-#include "__optional.hpp"
-#include "__queries.hpp"
-#include "__schedulers.hpp"
-#include "__typeinfo.hpp"
+#  include "../functional.hpp"  // IWYU pragma: keep for __with_default
+#  include "../stop_token.hpp"  // IWYU pragma: keep for get_stop_token_t
+#  include "__any.hpp"
+#  include "__any_allocator.hpp"
+#  include "__inline_scheduler.hpp"
+#  include "__optional.hpp"
+#  include "__queries.hpp"
+#  include "__schedulers.hpp"
+#  include "__typeinfo.hpp"
 
-#include <exception>
-#include <optional>
-#include <span>
+#  if !STDEXEC_USE_MODULES()
+#    include <exception>
+#    include <optional>
+#    include <span>
+#  endif
 
-#include "__prologue.hpp"
+#  include "__prologue.hpp"
 
 STDEXEC_PRAGMA_IGNORE_MSVC(4702)  // warning C4702: unreachable code
 STDEXEC_PRAGMA_IGNORE_GNU("-Warray-bounds")
 
 namespace STDEXEC
 {
+  STDEXEC_MODULE_EXPORT
   class task_scheduler;
 
   namespace parallel_scheduler_replacement
   {
     /// Interface for completing a sender operation. Backend will call frontend though
     /// this interface for completing the `schedule` and `schedule_bulk` operations.
+    STDEXEC_MODULE_EXPORT_AUTHORING
     class receiver_proxy
     {
      public:
@@ -72,6 +84,7 @@ namespace STDEXEC
 
     inline constexpr receiver_proxy::~receiver_proxy() = default;
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     struct bulk_item_receiver_proxy : receiver_proxy
     {
       virtual constexpr void execute(size_t, size_t) noexcept = 0;
@@ -130,6 +143,7 @@ namespace STDEXEC
       }
     };
 
+    STDEXEC_MODULE_EXPORT_AUTHORING
     struct parallel_scheduler_backend : __any::__iabstract<__iparallel_scheduler_backend>
     {};
   }  // namespace parallel_scheduler_replacement
@@ -410,4 +424,5 @@ namespace STDEXEC
   }  // namespace __detail
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

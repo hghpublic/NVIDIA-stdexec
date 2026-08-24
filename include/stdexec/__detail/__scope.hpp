@@ -16,14 +16,24 @@
 #pragma once
 
 #include "__config.hpp"
-#include "__utility.hpp"
 
-#include <type_traits>
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include "__prologue.hpp"
+import stdexec;
+
+#else
+
+#  include "__utility.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <type_traits>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
+  STDEXEC_MODULE_EXPORT_AUTHORING
   template <class _Fn, class... _Ts>
   struct __scope_guard;
 
@@ -118,4 +128,5 @@ namespace STDEXEC
   __scope_guard(_Fn, _Ts...) -> __scope_guard<_Fn, std::unwrap_reference_t<_Ts>...>;
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)

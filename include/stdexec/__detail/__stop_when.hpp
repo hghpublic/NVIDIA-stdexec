@@ -16,20 +16,30 @@
  */
 #pragma once
 
-#include "__execution_fwd.hpp"
+#include "__config.hpp"
 
-#include "__atomic.hpp"
-#include "__basic_sender.hpp"
-#include "__concepts.hpp"
-#include "__env.hpp"
-#include "__sender_concepts.hpp"
-#include "__sender_introspection.hpp"
-#include "__stop_token.hpp"
+#if STDEXEC_USE_MODULES() && !defined(STDEXEC_IN_MODULE_PURVIEW)
 
-#include <type_traits>
-#include <utility>
+import stdexec;
 
-#include "__prologue.hpp"
+#else
+
+#  include "__execution_fwd.hpp"
+
+#  include "__atomic.hpp"
+#  include "__basic_sender.hpp"
+#  include "__concepts.hpp"
+#  include "__env.hpp"
+#  include "__sender_concepts.hpp"
+#  include "__sender_introspection.hpp"
+#  include "__stop_token.hpp"
+
+#  if !STDEXEC_USE_MODULES()
+#    include <type_traits>
+#    include <utility>
+#  endif
+
+#  include "__prologue.hpp"
 
 namespace STDEXEC
 {
@@ -198,6 +208,7 @@ namespace STDEXEC
   ///        into its child sender such that the sender responds to stop
   ///        requests from both the given stop token and the receiver's token
   /// @hideinitializer
+  STDEXEC_MODULE_EXPORT_AUTHORING
   inline constexpr __stop_when_t __stop_when{};
 
   template <>
@@ -205,4 +216,5 @@ namespace STDEXEC
   {};
 }  // namespace STDEXEC
 
-#include "__epilogue.hpp"
+#  include "__epilogue.hpp"
+#endif  // !STDEXEC_USE_MODULES() || defined(STDEXEC_IN_MODULE_PURVIEW)
